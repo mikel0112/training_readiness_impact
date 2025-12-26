@@ -1,0 +1,50 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Data preprocess",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "src/data_preprocessing.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Data module",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "src/datamodule.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Model training",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "src/train.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Evaluation",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "src/evaluation.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Predictions",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "src/predictions.py",
+            "console": "integratedTerminal"
+        },
+    ]
+}

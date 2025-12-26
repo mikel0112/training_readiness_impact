@@ -1,0 +1,12 @@
+requests
+xgboost
+torch
+numpy
+pandas
+scikit-learn
+pytorch-lightning
+matplotlib
+seaborn
+mlxtend
+openpyxl
+albumentations
