@@ -5,6 +5,8 @@ import pandas as pd
 import numpy as np
 import os
 from redmail import gmail
+import matplotlib.pyplot as plt
+import os
 
 
 class Intervals:
@@ -45,13 +47,13 @@ class Intervals:
         :rtype: str
         """
         if type(start_date) is not datetime.date:
-            raise TypeError("datetime required")
+            raise TypeError("dateperrequired")
 
         params = {}
 
         if end_date is not None:
             if type(end_date) is not datetime.date:
-                raise TypeError("datetime required")
+                raise TypeError("dateperrequired")
             end_date = end_date + datetime.timedelta(days=1)
             params["oldest"] = start_date.isoformat()
             params["newest"] = end_date.isoformat()
@@ -123,7 +125,7 @@ class Intervals:
         url = "{}/api/v1/activity/{}/streams".format(Intervals.BASE_URL, activity_id)
         res = self._make_request("get", url)
         j = res.json()
-        time = []
+        per= []
         watts = []
         cadence = []
         heartrate = []
@@ -137,7 +139,7 @@ class Intervals:
         for stream in j:
             try:
                 if stream["type"] == "time":
-                    time = stream
+                    per= stream
                 elif stream["type"] == "watts":
                     watts = stream
                 elif stream["type"] == "cadence":
@@ -178,13 +180,13 @@ class Intervals:
     def wellness(self, start_date, end_date=None):
         """ """
         if type(start_date) is not datetime.date:
-            raise TypeError("datetime required")
+            raise TypeError("dateperrequired")
 
         params = {}
 
         if end_date is not None:
             if type(end_date) is not datetime.date:
-                raise TypeError("datetime required")
+                raise TypeError("dateperrequired")
 
             params["oldest"] = start_date.isoformat()
             params["newest"] = end_date.isoformat()
@@ -262,7 +264,20 @@ class Intervals:
         return res.json()
 
 class WriteEmail():
-    def __init__(self, athlete_name, start_week_date, fin_week_date, total_hours, total_distance, total_elevation_gain, form, ramp):
+    def __init__(
+            self, 
+            athlete_name, 
+            start_week_date,
+            fin_week_date, total_hours,
+            total_distance, 
+            total_elevation_gain, 
+            form, 
+            ramp,
+            time_zones, 
+            run_hours, 
+            ride_hours, 
+            other_hours
+        ):
         self.athlete_name = athlete_name
         self.start_week_date = start_week_date
         self.fin_week_date = fin_week_date
@@ -271,9 +286,68 @@ class WriteEmail():
         self.form = form
         self.ramp = ramp
         self.total_elevation_gain = total_elevation_gain
+        self.time_zones = time_zones
+        self.run_hours = run_hours
+        self.ride_hours = ride_hours
+        self.other_hours = other_hours
+    
+
+    def form_chart(self):
+        # fill the back space with different colors based on y values horizontally
+        fig = plt.figure(figsize=(10, 5))
+        ax = fig.add_subplot(1, 1, 1)
+        # dar color al fondo de la grafica
+        ax.axhspan(-100, -30, facecolor='red', alpha=0.5)
+        ax.axhspan(-30, -10, facecolor='green', alpha=0.5)
+        ax.axhspan(-10, 5, facecolor='gray', alpha=0.5)
+        ax.axhspan(5, 20, facecolor='blue', alpha=0.5)
+        ax.axhspan(20, 100, facecolor='yellow', alpha=0.5)
+
+        # graph the form bar vertically
+        ax.bar(1, self.form, color='black', width=0.5)
+        ax.set_xlim(0, 2)
+        ax.set_ylim(-100, 100)
+        ax.set_yticks([-100, -30, -10, 5, 20, 100])
+        ax.set_yticklabels(['-100', '-30', '-10', '5', '20', '100'])
+        ax.set_xticks([])
+        ax.set_xticklabels([])
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+        ax.spines['bottom'].set_visible(False)
+        os.makedirs("outputs/email",exist_ok=True)
+        plt.savefig("outputs/email/form.png", bbox_inches='tight')
+    
+    def hours_pie_chart(self):
+        labels = 'Run', 'Ride', 'Other'
+        sizes = [self.run_hours, self.ride_hours, self.other_hours]
+        explode = (0, 0, 0.1)
+        fig1, ax1 = plt.subplots()
+        ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%',
+                shadow=True, startangle=90)
+        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        plt.savefig("outputs/email/hours.png", bbox_inches='tight')
+    
+    def zones_cumulative_bar_chart(self):
+        total_time= sum(self.time_zones)
+        z1_per= self.time_zones[0]/total_time*100
+        z2_per= self.time_zones[1]/total_time*100
+        z3_per= self.time_zones[2]/total_time*100
+        z4_per= self.time_zones[3]/total_time*100
+        z5_per= self.time_zones[4]/total_time*100   
+        z6_per= self.time_zones[5]/total_time*100
+        z7_per= self.time_zones[6]/total_time*100
+
+        # graph in bars each in a personalizeed color
+        plt.figure(figsize=(10, 5))
+        plt.bar(['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5', 'Zone 6', 'Zone 7'], [z1_per, z2_per, z3_per, z4_per, z5_per, z6_per, z7_per], color=['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink'])
+        plt.savefig("outputs/email/zones.png", bbox_inches='tight')
 
     def send_email(self, info, athlete_name):
 
+        self.form_chart()
+        self.hours_pie_chart()
+        self.zones_cumulative_bar_chart()
         gmail.user_name = info[athlete_name]["email"]
         gmail.password = info[athlete_name]["email_pass"]
         gmail.send(
@@ -282,12 +356,12 @@ class WriteEmail():
             html=open("src/email_template.html", "r").read(),
             body_params={
                 "athlete_name": athlete_name,
-                "comentario_final" : ""
+                "comentario_final" : "Máquina"
             },
-            images={
-                "grafico_1": "src/grafico_1.png",
-                "grafico_2": "src/grafico_2.png",
-                "grafico_3": "src/grafico_3.png"
+            body_images={
+                "grafico_1": "outputs/email/form.png",
+                "grafico_2": "outputs/email/hours.png",
+                "grafico_3": "outputs/email/zones.png"
             }
         )
 
@@ -317,6 +391,7 @@ if __name__ == "__main__":
             total_elevation_gain = week['total_elevation_gain']
             form = week['form']
             ramp = week['rampRate']
+            time_zones = week['timeInZones']
             for activity in week['byCategory']:
                 if activity['category'] == 'Run':
                     run_hours = round(activity['time']/3600,2) 
@@ -333,7 +408,20 @@ if __name__ == "__main__":
     
     # send weekly stats by email
     info = json.load(open("docs/p_info.json"))
-    write_email = WriteEmail(athlete_name, start_week_date, fin_week_date, total_hours, total_distance, total_elevation_gain, form, ramp)
+    write_email = WriteEmail(
+        athlete_name, 
+        start_week_date, 
+        fin_week_date, 
+        total_hours, 
+        total_distance, 
+        total_elevation_gain, 
+        form, 
+        ramp, 
+        time_zones, 
+        run_hours, 
+        ride_hours, 
+        other_hours
+    )
     write_email.send_email(info, athlete_name)
 
     # download wellness data
