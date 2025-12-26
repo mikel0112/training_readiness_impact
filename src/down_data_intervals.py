@@ -4,6 +4,7 @@ import requests
 import pandas as pd
 import numpy as np
 import os
+from redmail import gmail
 
 
 class Intervals:
@@ -251,6 +252,44 @@ class Intervals:
         res = self._make_request("get", url, params=params)
         return res.json()
     
+    def summary_stats(self, start_date=None, end_date=None):
+        url = f"{self.BASE_URL}/api/v1/athlete/{self.athlete_id}/athlete-summary"
+        params = {}
+        params["start"] = start_date.isoformat()
+        params["end"] = end_date.isoformat()
+        #params['tags'] = 'Coaching'
+        res = self._make_request("get", url, params=params)
+        return res.json()
+
+class WriteEmail():
+    def __init__(self, athlete_name, start_week_date, fin_week_date, total_hours, total_distance, total_elevation_gain, form, ramp):
+        self.athlete_name = athlete_name
+        self.start_week_date = start_week_date
+        self.fin_week_date = fin_week_date
+        self.total_hours = total_hours
+        self.total_distance = total_distance
+        self.form = form
+        self.ramp = ramp
+        self.total_elevation_gain = total_elevation_gain
+
+    def send_email(self, info, athlete_name):
+
+        gmail.user_name = info[athlete_name]["email"]
+        gmail.password = info[athlete_name]["email_pass"]
+        gmail.send(
+            subject="Estadísticas semanales de " + athlete_name,
+            receivers=[gmail.user_name],
+            html=open("src/email_template.html", "r").read(),
+            body_params={
+                "athlete_name": athlete_name,
+                "comentario_final" : ""
+            },
+            images={
+                "grafico_1": "src/grafico_1.png",
+                "grafico_2": "src/grafico_2.png",
+                "grafico_3": "src/grafico_3.png"
+            }
+        )
 
 if __name__ == "__main__":
 
@@ -261,6 +300,41 @@ if __name__ == "__main__":
     api_key = api_info[athlete_name]["password"]
 
     intervals = Intervals(athlete_id, api_key)
+
+    # download athletes summary stats
+    summary_stats = intervals.summary_stats(datetime.date(2025,12,15), datetime.date(2025,12,21))
+    for week in summary_stats:
+        if week['athlete_name'] == "Jon1998":
+            start_week_date = week['date']
+            # convert to datetime
+            start_week_date = datetime.datetime.strptime(start_week_date, '%Y-%m-%d')
+            fin_week_date = start_week_date + datetime.timedelta(days=7)
+            # back to string dates
+            start_week_date = start_week_date.strftime('%Y-%m-%d')
+            fin_week_date = fin_week_date.strftime('%Y-%m-%d')
+            total_hours = round(week['time']/3600,2)
+            total_distance = round(week['distance']/1000,2)
+            total_elevation_gain = week['total_elevation_gain']
+            form = week['form']
+            ramp = week['rampRate']
+            for activity in week['byCategory']:
+                if activity['category'] == 'Run':
+                    run_hours = round(activity['time']/3600,2) 
+                    run_distance = round(activity['distance']/1000,2)
+                    run_elevation_gain = activity['total_elevation_gain']
+                elif activity['category'] == 'Ride':
+                    ride_hours = round(activity['time']/3600,2) 
+                    ride_distance = round(activity['distance']/1000,2)
+                    ride_elevation_gain = activity['total_elevation_gain']
+                else:
+                    other_hours = round(activity['time']/3600,2) 
+                    other_distance = round(activity['distance']/1000,2)
+                    other_elevation_gain = activity['total_elevation_gain']
+    
+    # send weekly stats by email
+    info = json.load(open("docs/p_info.json"))
+    write_email = WriteEmail(athlete_name, start_week_date, fin_week_date, total_hours, total_distance, total_elevation_gain, form, ramp)
+    write_email.send_email(info, athlete_name)
 
     # download wellness data
     if os.path.exists(f"data/unified_data_{athlete_name}.csv"):

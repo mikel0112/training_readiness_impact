@@ -1,0 +1,38 @@
+<html>
+<body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+    <div style="max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
+        
+        <h2 style="color: #2c3e50; text-align: center;">Resumen de Rendimiento: {{ athlete_name }}</h2>
+        <p>Hola,</p>
+        <p>Aquí tienes el análisis visual y las estadísticas correspondientes a la última sesión. Los datos muestran un progreso constante.</p>
+        
+        <hr style="border: 0; border-top: 1px solid #eee;">
+
+        <div style="margin-bottom: 30px;">
+            <h3 style="color: #e67e22;">1. Intensidad de Entrenamiento</h3>
+            <img src="{{ grafico_1 }}" style="width: 100%; border-radius: 5px;">
+            <p style="font-size: 0.9em; color: #666;">Este gráfico muestra los picos de frecuencia cardíaca alcanzados.</p>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+            <h3 style="color: #e67e22;">2. Comparativa Semanal</h3>
+            <img src="{{ grafico_2 }}" style="width: 100%; border-radius: 5px;">
+            <p style="font-size: 0.9em; color: #666;">Comparación de la carga de trabajo respecto a la semana anterior.</p>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+            <h3 style="color: #e67e22;">3. Distribución de Zonas</h3>
+            <img src="{{ grafico_3 }}" style="width: 100%; border-radius: 5px;">
+            <p style="font-size: 0.9em; color: #666;">Tiempo total transcurrido en cada zona de potencia.</p>
+        </div>
+
+        <p style="background-color: #f9f9f9; padding: 10px; border-left: 5px solid #2c3e50;">
+            <strong>Nota técnica:</strong> {{ comentario_final }}
+        </p>
+
+        <footer style="margin-top: 20px; text-align: center; font-size: 0.8em; color: #999;">
+            Enviado automáticamente por el Sistema de Análisis Deportivo.
+        </footer>
+    </div>
+</body>
+</html>

@@ -10,3 +10,4 @@ seaborn
 mlxtend
 openpyxl
 albumentations
+redmail
