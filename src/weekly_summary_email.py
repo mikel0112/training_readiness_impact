@@ -6,6 +6,8 @@ import json
 import pandas as pd
 import datetime
 import numpy as np
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__)))
 from down_data_intervals import Intervals, SaveData
 from flask import Flask
 import threading
