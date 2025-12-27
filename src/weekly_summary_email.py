@@ -6,7 +6,7 @@ import json
 import pandas as pd
 import datetime
 import numpy as np
-from src.down_data_intervals import Intervals, SaveData
+from down_data_intervals import Intervals, SaveData
 from flask import Flask
 import threading
 
