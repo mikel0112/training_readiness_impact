@@ -491,13 +491,13 @@ if __name__ == "__main__":
     
     if start_date.date() < end_date:
         weekly_stats_data = intervals.summary_stats(start_date.date(), end_date)
-    # list of athletes
-    athletes = []
-    for athlete, data in credentials_info.items():
-        athletes.append(data['icu_name'])
-        # save data for every athlete
-    for athlete in athletes:
-        save_data.weekly_stats_data(weekly_stats_data, athlete, old_weekly_stats_df)
+        # list of athletes
+        athletes = []
+        for athlete, data in credentials_info.items():
+            athletes.append(data['icu_name'])
+            # save data for every athlete
+        for athlete in athletes:
+            save_data.weekly_stats_data(weekly_stats_data, athlete, old_weekly_stats_df)
 
 
     #---------------------------------------------------#
