@@ -7,6 +7,8 @@ import os
 from redmail import gmail
 import matplotlib.pyplot as plt
 import os
+from pathlib import Path
+from fpdf import FPDF
 
 
 class Intervals:
@@ -164,7 +166,7 @@ class Intervals:
                 print("Error on activity", activity_id, ":", e)
 
         return (
-            time,
+            per,
             watts,
             cadence,
             heartrate,
@@ -263,270 +265,241 @@ class Intervals:
         res = self._make_request("get", url, params=params)
         return res.json()
 
-class WriteEmail():
-    def __init__(
-            self, 
-            athlete_name, 
-            start_week_date,
-            fin_week_date, total_hours,
-            total_distance, 
-            total_elevation_gain, 
-            form, 
-            ramp,
-            time_zones, 
-            run_hours, 
-            ride_hours, 
-            other_hours
-        ):
+
+
+class SaveData:
+    def __init__(self, athlete_name):
         self.athlete_name = athlete_name
-        self.start_week_date = start_week_date
-        self.fin_week_date = fin_week_date
-        self.total_hours = total_hours
-        self.total_distance = total_distance
-        self.form = form
-        self.ramp = ramp
-        self.total_elevation_gain = total_elevation_gain
-        self.time_zones = time_zones
-        self.run_hours = run_hours
-        self.ride_hours = ride_hours
-        self.other_hours = other_hours
+
+    def wellness_data(self, wellness_data, old_df):
+        wellness_df = pd.DataFrame(wellness_data)
+        interesting_columns = [
+            "id",
+            "rampRate",
+            "weight",
+            "restingHR",
+            "hrv",
+            "sleepSecs",
+            "stress",
+            "motivation",
+            "injury",
+        ]
+        clean_df = wellness_df[interesting_columns]
+        # change column name from id to date
+        clean_df = clean_df.rename(columns={"id": "date"})
+        # sleep values from seconds to hours
+        clean_df["sleepSecs"] = clean_df["sleepSecs"] / 3600
+        # merge data from both dfs
+        wellness_clean_df = pd.concat([old_df, clean_df], ignore_index=True)
+        os.makedirs(f"data/{self.athlete_name}", exist_ok=True)
+        wellness_clean_df.to_csv(f"data/{self.athlete_name}/wellness.csv")
+
+    def activities_data(self, activities_data, old_act_df):
+        df_activities = pd.DataFrame(activities_dict)
+        activities_clean_df = df_activities[[
+            'id',
+            'start_date_local', 
+            'type',
+            'moving_time',
+            'total_elevation_gain',
+            'distance',
+            'average_speed',
+            'max_heartrate',
+            'average_heartrate',
+            'average_cadence',
+            'icu_average_watts',
+            'icu_rpe', 
+            'feel',
+            'icu_efficiency_factor',
+
+        ]]
+        # change date format to datetime.date
+        activities_clean_df['start_date_local'] = pd.to_datetime(activities_clean_df['start_date_local']).dt.date
+        # create session quality column
+        activities_clean_df['session_quality'] = activities_clean_df['feel'] * activities_clean_df['icu_efficiency_factor']
+        # change units to average speed
+        activities_clean_df.loc[activities_clean_df['type'] == 'Ride', 
+                                'average_speed'] = activities_clean_df['average_speed'] * 3.6
+        activities_clean_df.loc[activities_clean_df['type'] == 'Run',
+                                'average_speed'] = 1/(activities_clean_df['average_speed'] * 0.06)
+        activities_clean_df.loc[activities_clean_df['type'] == 'TrailRun',
+                                'average_speed'] = 1/(activities_clean_df['average_speed'] * 0.06)
+        activities_clean_df['moving_time'] = activities_clean_df['moving_time'] / 3600
+        activities_clean_df['distance'] = activities_clean_df['distance'] / 1000
+        # merge data from both dfs
+        activities_clean_df = pd.concat([old_act_df, activities_clean_df], ignore_index=True)
+        os.makedirs(f"data/{self.athlete_name}", exist_ok=True)
+        activities_clean_df.to_csv(f"data/{self.athlete_name}/activities.csv")
     
+    def weekly_stats_data(self, weekly_stats_data, athlete, old_weekly_stats_df):
+        df_weekly_stats = pd.DataFrame(weekly_stats_data)
+        # save the rows that in a certain column contain athlete name
+        df_weekly_stats = df_weekly_stats[df_weekly_stats['athlete_name'] == athlete]
+        clean_df = df_weekly_stats[[
+            'count',
+            'time',
+            'calories',
+            'total_elevation_gain',
+            'training_load',
+            'distance',
+            'date',
+            'form',
+            'rampRate',
+            'weight',
+            'timeInZones',
+            'byCategory'
+        ]]
+        expanded_columns = pd.DataFrame(clean_df['timeInZones'].tolist(), index=clean_df.index)
+        expanded_columns.columns = [f"Z_{i}" for i in range(1, len(expanded_columns.columns) + 1)]
+        expanded_columns['total'] = expanded_columns.sum(axis=1)
+        total_col = expanded_columns.iloc[:, -1]
+        expanded_columns_percentage = expanded_columns.div(total_col, axis=0)
+        expanded_columns_percentage = expanded_columns_percentage.mul(100)
+        expanded_columns_percentage = expanded_columns_percentage.drop(columns=['total'])
+        clean_df = pd.concat([clean_df, expanded_columns_percentage], axis=1)
 
-    def form_chart(self):
-        # fill the back space with different colors based on y values horizontally
-        fig = plt.figure(figsize=(10, 5))
-        ax = fig.add_subplot(1, 1, 1)
-        # dar color al fondo de la grafica
-        ax.axhspan(-100, -30, facecolor='red', alpha=0.5)
-        ax.axhspan(-30, -10, facecolor='green', alpha=0.5)
-        ax.axhspan(-10, 5, facecolor='gray', alpha=0.5)
-        ax.axhspan(5, 20, facecolor='blue', alpha=0.5)
-        ax.axhspan(20, 100, facecolor='yellow', alpha=0.5)
+        expanded_columns = pd.DataFrame(clean_df['byCategory'].tolist(), index=clean_df.index)
+        rows, cols = expanded_columns.shape
+        types_df = pd.DataFrame(columns=[
+            'run_time',
+            'run_count',
+            'run_elevation_gain',
+            'run_distance',
+            'ride_time',
+            'ride_count',
+            'ride_elevation_gain',
+            'ride_distance',
+            'strength_time',
+            'strength_count',
+            'strength_elevation_gain',
+            'strength_distance'
+        ])
+        for i in range(rows):
+            for j in range(cols):
+                type_dict = expanded_columns.iloc[i, j]
+                if type_dict['category'] == 'Run':
+                    types_df.loc[i, 'run_time'] = type_dict['time']
+                    types_df.loc[i, 'run_count'] = type_dict['count']
+                    types_df.loc[i, 'run_elevation_gain'] = type_dict['total_elevation_gain']
+                    types_df.loc[i, 'run_distance'] = type_dict['distance']
+                elif type_dict['category'] == 'Ride':
+                    types_df.loc[i, 'ride_time'] = type_dict['time']
+                    types_df.loc[i, 'ride_count'] = type_dict['count']
+                    types_df.loc[i, 'ride_elevation_gain'] = type_dict['total_elevation_gain']
+                    types_df.loc[i, 'ride_distance'] = type_dict['distance']
+                elif type_dict['category'] == 'Workout':
+                        types_df.loc[i, 'strength_time'] = type_dict['time']
+                        types_df.loc[i, 'strength_count'] = type_dict['count']
+                        types_df.loc[i, 'strength_elevation_gain'] = type_dict['total_elevation_gain']
+                        types_df.loc[i, 'strength_distance'] = type_dict['distance']
+        
+        index_list = clean_df.index.tolist()
+        types_df.index = index_list
+        clean_df = pd.concat([clean_df, types_df], axis=1)
 
-        # graph the form bar vertically
-        ax.bar(1, self.form, color='black', width=0.5)
-        ax.set_xlim(0, 2)
-        ax.set_ylim(-100, 100)
-        ax.set_yticks([-100, -30, -10, 5, 20, 100])
-        ax.set_yticklabels(['-100', '-30', '-10', '5', '20', '100'])
-        ax.set_xticks([])
-        ax.set_xticklabels([])
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.spines['left'].set_visible(False)
-        ax.spines['bottom'].set_visible(False)
-        os.makedirs("outputs/email",exist_ok=True)
-        plt.savefig("outputs/email/form.png", bbox_inches='tight')
-    
-    def hours_pie_chart(self):
-        labels = 'Run', 'Ride', 'Other'
-        sizes = [self.run_hours, self.ride_hours, self.other_hours]
-        explode = (0, 0, 0.1)
-        fig1, ax1 = plt.subplots()
-        ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%',
-                shadow=True, startangle=90)
-        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-        plt.savefig("outputs/email/hours.png", bbox_inches='tight')
-    
-    def zones_cumulative_bar_chart(self):
-        total_time= sum(self.time_zones)
-        z1_per= self.time_zones[0]/total_time*100
-        z2_per= self.time_zones[1]/total_time*100
-        z3_per= self.time_zones[2]/total_time*100
-        z4_per= self.time_zones[3]/total_time*100
-        z5_per= self.time_zones[4]/total_time*100   
-        z6_per= self.time_zones[5]/total_time*100
-        z7_per= self.time_zones[6]/total_time*100
+        # drop unnecessary columns
+        clean_df = clean_df.drop(columns=['timeInZones', 'byCategory'])
 
-        # graph in bars each in a personalizeed color
-        plt.figure(figsize=(10, 5))
-        plt.bar(['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5', 'Zone 6', 'Zone 7'], [z1_per, z2_per, z3_per, z4_per, z5_per, z6_per, z7_per], color=['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink'])
-        plt.savefig("outputs/email/zones.png", bbox_inches='tight')
+        # change columns units
+        clean_df['time'] = clean_df['time'] / 3600
+        clean_df['distance'] = clean_df['distance'] / 1000
+        clean_df['run_time'] = clean_df['run_time'] / 3600
+        clean_df['run_distance'] = clean_df['run_distance'] / 1000
+        clean_df['ride_time'] = clean_df['ride_time'] / 3600
+        clean_df['ride_distance'] = clean_df['ride_distance'] / 1000
+        clean_df['strength_time'] = clean_df['strength_time'] / 3600
+        clean_df['strength_distance'] = clean_df['strength_distance'] / 1000
 
-    def send_email(self, info, athlete_name):
 
-        self.form_chart()
-        self.hours_pie_chart()
-        self.zones_cumulative_bar_chart()
-        gmail.user_name = info[athlete_name]["email"]
-        gmail.password = info[athlete_name]["email_pass"]
-        gmail.send(
-            subject="Estadísticas semanales de " + athlete_name,
-            receivers=[gmail.user_name],
-            html=open("src/email_template.html", "r").read(),
-            body_params={
-                "athlete_name": athlete_name,
-                "comentario_final" : "Máquina"
-            },
-            body_images={
-                "grafico_1": "outputs/email/form.png",
-                "grafico_2": "outputs/email/hours.png",
-                "grafico_3": "outputs/email/zones.png"
-            }
-        )
+        # merge data from both dfs
+        df_weekly_stats = pd.concat([old_weekly_stats_df, clean_df], ignore_index=True)
+        os.makedirs(f"data/{athlete}", exist_ok=True)
+        df_weekly_stats.to_csv(f"data/{athlete}/weekly_stats.csv")
 
 if __name__ == "__main__":
 
-    # get athlete credentials
-    athlete_name = input("Athlete name: ")
-    api_info = json.load(open("docs/p_info.json"))
-    athlete_id = api_info[athlete_name]["id"]
-    api_key = api_info[athlete_name]["password"]
+    # get credentials
+    credentials_info = json.load(open("docs/p_info.json"))
+    for user, data in credentials_info.items():
+        if data['role'] == "coach":
+            coach_name = user
+    coach_id = credentials_info[coach_name]["id"]
+    api_key = credentials_info[coach_name]["password"]
 
-    intervals = Intervals(athlete_id, api_key)
+    intervals = Intervals(coach_id, api_key)
+    save_data = SaveData(coach_name)
 
-    # download athletes summary stats
-    summary_stats = intervals.summary_stats(datetime.date(2025,12,15), datetime.date(2025,12,21))
-    for week in summary_stats:
-        if week['athlete_name'] == "Jon1998":
-            start_week_date = week['date']
-            # convert to datetime
-            start_week_date = datetime.datetime.strptime(start_week_date, '%Y-%m-%d')
-            fin_week_date = start_week_date + datetime.timedelta(days=7)
-            # back to string dates
-            start_week_date = start_week_date.strftime('%Y-%m-%d')
-            fin_week_date = fin_week_date.strftime('%Y-%m-%d')
-            total_hours = round(week['time']/3600,2)
-            total_distance = round(week['distance']/1000,2)
-            total_elevation_gain = week['total_elevation_gain']
-            form = week['form']
-            ramp = week['rampRate']
-            time_zones = week['timeInZones']
-            for activity in week['byCategory']:
-                if activity['category'] == 'Run':
-                    run_hours = round(activity['time']/3600,2) 
-                    run_distance = round(activity['distance']/1000,2)
-                    run_elevation_gain = activity['total_elevation_gain']
-                elif activity['category'] == 'Ride':
-                    ride_hours = round(activity['time']/3600,2) 
-                    ride_distance = round(activity['distance']/1000,2)
-                    ride_elevation_gain = activity['total_elevation_gain']
-                else:
-                    other_hours = round(activity['time']/3600,2) 
-                    other_distance = round(activity['distance']/1000,2)
-                    other_elevation_gain = activity['total_elevation_gain']
-    
-    # send weekly stats by email
-    info = json.load(open("docs/p_info.json"))
-    write_email = WriteEmail(
-        athlete_name, 
-        start_week_date, 
-        fin_week_date, 
-        total_hours, 
-        total_distance, 
-        total_elevation_gain, 
-        form, 
-        ramp, 
-        time_zones, 
-        run_hours, 
-        ride_hours, 
-        other_hours
-    )
-    write_email.send_email(info, athlete_name)
+    ########-------------------------------------########
+    ########      DOWNLOAD WELLNESS DATA         ########
+    ########-------------------------------------########
 
-    # download wellness data
-    if os.path.exists(f"data/unified_data_{athlete_name}.csv"):
-        old_df = pd.read_csv(f"data/unified_data_{athlete_name}.csv")
-        start_date = old_df['date'].max()
+    # find dates
+    if os.path.exists(f"data/{coach_name}/wellness.csv"):
+        old_wellness_df = pd.read_csv(f"data/{coach_name}/wellness.csv")
+        start_date = old_wellness_df['date'].max()
         start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
         # add one day to start date
         start_date = start_date + datetime.timedelta(days=1)
     else:
         start_date = datetime.datetime.strptime(input("Start date (YYYY-MM-DD): "), "%Y-%m-%d")
+        old_wellness_df = pd.DataFrame()
     end_date = datetime.date.today()
-    wellness_data = intervals.wellness(start_date.date(), end_date)
-    wellness_df = pd.DataFrame(wellness_data)
-    interesting_columns = [
-        "id",
-        "rampRate",
-        "weight",
-        "restingHR",
-        "hrv",
-        "sleepSecs",
-        "stress",
-        "motivation",
-        "injury",
-    ]
-    wellness_clean_df = wellness_df[interesting_columns]
 
+    # download
+    if start_date.date() < end_date:
+        wellness_df = intervals.wellness(start_date.date(), end_date)
+
+        # save data
+        save_data.wellness_data(wellness_df, old_wellness_df)
+
+    #---------------------------------------------------#
+    #---------------------------------------------------#
+
+
+    ########-------------------------------------########
+    ########      DOWNLOAD ACTIVITIES DATA       ########
+    ########-------------------------------------########
     # download activities csv
-    activities_dict = intervals.activities(start_date.date(), end_date)
-    df_activities = pd.DataFrame(activities_dict)
-    activities_clean_df = df_activities[['id','start_date_local', 'type','icu_rpe', 'feel','icu_efficiency_factor']]
-    #eliminate activities that are not run or trailrun
-    activities_clean_df = activities_clean_df[
-        (activities_clean_df['type'] == 'Run') | (activities_clean_df['type'] == 'TrailRun')
-    ]
-    # change date format to datetime.date
-    activities_clean_df['start_date_local'] = pd.to_datetime(activities_clean_df['start_date_local']).dt.date
-    # create session quality column
-    activities_clean_df['session_quality'] = activities_clean_df['feel'] * activities_clean_df['icu_efficiency_factor']
-    # get activities id list
-    activity_ids = activities_clean_df['id'].tolist()
+    if os.path.exists(f"data/{coach_name}/activities.csv"):
+        old_act_df = pd.read_csv(f"data/{coach_name}/activities.csv")
+    else:
+        start_date = datetime.datetime.strptime(input("Start date (YYYY-MM-DD): "), "%Y-%m-%d")
+        old_act_df = pd.DataFrame()
 
-    # download activity streams for each activity
-    for activity_id in activity_ids:
-        (
-            time,
-            watts,
-            cadence,
-            heartrate,
-            distance,
-            altitude,
-            latlng,
-            velocity_smooth,
-            temp,
-            torque,
-            respiration,
-        ) = intervals.activitiy_streams(activity_id)
-        # 2min to 5 min power and heartrate avegrage
+    if start_date.date() < end_date:
+        activities_dict = intervals.activities(start_date.date(), end_date)
+    
+        # save data
+        save_data.activities_data(activities_dict, old_act_df)
 
-        start_power = round(float(np.mean(watts['data'][120:300])),2)
-        start_heartrate = round(float(np.mean(heartrate['data'][120:300])),2)
+    #---------------------------------------------------#
+    #---------------------------------------------------#
 
-        # last 3 min power and heartrate
-        end_power = round(float(np.mean(watts['data'][-180:])),2)
-        end_heartrate = round(float(np.mean(heartrate['data'][-180:])),2)
-        
-        # add data to activities_clean_df
-        activities_clean_df.loc[activities_clean_df['id'] == activity_id, 'start_power'] = start_power
-        activities_clean_df.loc[activities_clean_df['id'] == activity_id, 'start_heartrate'] = start_heartrate
-        activities_clean_df.loc[activities_clean_df['id'] == activity_id, 'end_power'] = end_power
-        activities_clean_df.loc[activities_clean_df['id'] == activity_id, 'end_heartrate'] = end_heartrate
-        
-    # convert to datetime.date
-    wellness_clean_df['id'] = pd.to_datetime(wellness_clean_df['id']).dt.date
-    activities_clean_df['start_date_local'] = pd.to_datetime(activities_clean_df['start_date_local']).dt.date
-    # UNIFY BOTH DATAFRAMES using id and date
-    unified_df = pd.merge(
-        activities_clean_df,
-        wellness_clean_df,
-        left_on=['start_date_local'],
-        right_on=[ 'id'],
-        how='inner'
-    )
-    # if row contains nan eliminate it
-    unified_df = unified_df.dropna()
 
-    # drop type column
-    unified_df = unified_df.drop(columns=['type'])
-    # drop id_x column
-    unified_df = unified_df.drop(columns=['id_x'])
-    # drop id_y column
-    unified_df = unified_df.drop(columns=['id_y'])
-    # put start_date local as date index
-    unified_df = unified_df.set_index('start_date_local')
-    # order by start_date_local
-    unified_df = unified_df.sort_index(ascending=True)
-    # change index name to date
-    unified_df.index.name = 'date'
+    ########-------------------------------------########
+    ########      DOWNLOAD WEEKLY STATS DATA     ########
+    ########-------------------------------------########
+    # download activities csv
+    today_date = datetime.date.today()
+    # the sunday of the week before this week
+    end_date = today_date - datetime.timedelta(days=today_date.weekday()) - datetime.timedelta(days=1)
+    if os.path.exists(f"data/{coach_name}/weekly_stats.csv"):
+        old_weekly_stats_df = pd.read_csv(f"data/{coach_name}/weekly_stats.csv")
+    else:
+        start_date = datetime.datetime.strptime(input("Start date (YYYY-MM-DD): "), "%Y-%m-%d")
+        old_weekly_stats_df = pd.DataFrame()
+    
+    if start_date.date() < end_date:
+        weekly_stats_data = intervals.summary_stats(start_date.date(), end_date)
+    # list of athletes
+    athletes = []
+    for athlete, data in credentials_info.items():
+        athletes.append(data['icu_name'])
+        # save data for every athlete
+    for athlete in athletes:
+        save_data.weekly_stats_data(weekly_stats_data, athlete, old_weekly_stats_df)
 
-    # update df
-    if os.path.exists(f"data/unified_data_{athlete_name}.csv"):
-        combined_df = pd.concat([old_df, unified_df])
-        combined_df = combined_df[~combined_df.index.duplicated(keep='last')]
-        unified_df = combined_df.sort_index(ascending=True)
-    # save to csv
-    unified_df.to_csv(f"data/unified_data_{athlete_name}.csv", index=True)
 
+    #---------------------------------------------------#
+    #---------------------------------------------------#
     
