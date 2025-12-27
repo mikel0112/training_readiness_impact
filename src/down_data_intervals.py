@@ -462,6 +462,7 @@ if __name__ == "__main__":
     # download activities csv
     if os.path.exists(f"data/{coach_name}/activities.csv"):
         old_act_df = pd.read_csv(f"data/{coach_name}/activities.csv")
+        start_date = old_act_df['date'].max()+ datetime.timedelta(days=1)
     else:
         start_date = datetime.datetime.strptime(input("Start date (YYYY-MM-DD): "), "%Y-%m-%d")
         old_act_df = pd.DataFrame()

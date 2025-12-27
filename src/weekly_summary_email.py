@@ -167,8 +167,9 @@ def ejecutar_proceso_completo():
         end_date = today_date - datetime.timedelta(days=today_date.weekday()) - datetime.timedelta(days=1)
         if os.path.exists(f"data/{coach_name}/weekly_stats.csv"):
             old_weekly_stats_df = pd.read_csv(f"data/{coach_name}/weekly_stats.csv")
+            start_date = old_weekly_stats_df['date'].max()+ datetime.timedelta(days=1)
         else:
-            start_date = datetime.datetime.strptime(input("Start date (YYYY-MM-DD): "), "%Y-%m-%d")
+            #start_date = datetime.datetime.strptime(input("Start date (YYYY-MM-DD): "), "%Y-%m-%d")
             old_weekly_stats_df = pd.DataFrame()
         
         if start_date.date() < end_date:
