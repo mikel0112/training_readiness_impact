@@ -14,3 +14,4 @@ redmail
 mysql-connector-python
 fpdf2
 mysql-connector-python
+flask

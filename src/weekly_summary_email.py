@@ -7,7 +7,11 @@ import pandas as pd
 import datetime
 import numpy as np
 from down_data_intervals import Intervals, SaveData
+from flask import Flask
+import threading
 
+
+app = Flask(__name__)
 
 class ReporteDeportista(FPDF):
 
@@ -140,55 +144,74 @@ class WriteEmail():
             }
         )
 
+def ejecutar_proceso_completo():
+    try:
+        print("Iniciando proceso de datos y envío...")
+        # get credentials
+        credentials_info = json.load(open("docs/p_info.json"))
+        for user, data in credentials_info.items():
+            if data['role'] == "coach":
+                coach_name = user
+        coach_id = credentials_info[coach_name]["id"]
+        api_key = credentials_info[coach_name]["password"]
+
+        intervals = Intervals(coach_id, api_key)
+        save_data = SaveData(coach_name)
+
+        ########-------------------------------------########
+        ########      DOWNLOAD WEEKLY STATS DATA     ########
+        ########-------------------------------------########
+        # download activities csv
+        today_date = datetime.date.today()
+        # the sunday of the week before this week
+        end_date = today_date - datetime.timedelta(days=today_date.weekday()) - datetime.timedelta(days=1)
+        if os.path.exists(f"data/{coach_name}/weekly_stats.csv"):
+            old_weekly_stats_df = pd.read_csv(f"data/{coach_name}/weekly_stats.csv")
+        else:
+            start_date = datetime.datetime.strptime(input("Start date (YYYY-MM-DD): "), "%Y-%m-%d")
+            old_weekly_stats_df = pd.DataFrame()
+        
+        if start_date.date() < end_date:
+            weekly_stats_data = intervals.summary_stats(start_date.date(), end_date)
+            # list of athletes
+            athletes = []
+            for athlete, data in credentials_info.items():
+                athletes.append(data['icu_name'])
+                # save data for every athlete
+            for athlete in athletes:
+                save_data.weekly_stats_data(weekly_stats_data, athlete, old_weekly_stats_df)
+
+
+        #---------------------------------------------------#
+        #---------------------------------------------------#
+        date = datetime.datetime.today() - datetime.timedelta(days=datetime.datetime.today().weekday()) - datetime.timedelta(days=7)
+        date_string = date.strftime("%Y-%m-%d")
+        for key, values in credentials_info.items():
+            if values['role']=='coach':
+                coach_name = key
+            athlete_name = values['icu_name']
+            email_com = WriteEmail(athlete_name, date_string)
+            print(f"Sending email to {athlete_name}")
+            email_com.send_email(credentials_info, athlete_name, date_string, coach_name)
+
+        print("Proceso finalizado con éxito.")
+    except Exception as e:
+        print(f"Error: {e}")
+
+@app.route("/")
+def index():
+    # Ejecutamos en segundo plano para que Cloud Run reciba el OK de inmediato
+    thread = threading.Thread(target=ejecutar_proceso_completo)
+    thread.start()
+    return "Tarea recibida. Procesando envío de correos...", 200
+
 if __name__ == "__main__":
     
     """
     hay que añadir un temporizador para que se ejecute automatico
     todos los domingos a las 21:00
     """
-    # get credentials
-    credentials_info = json.load(open("docs/p_info.json"))
-    for user, data in credentials_info.items():
-        if data['role'] == "coach":
-            coach_name = user
-    coach_id = credentials_info[coach_name]["id"]
-    api_key = credentials_info[coach_name]["password"]
-
-    intervals = Intervals(coach_id, api_key)
-    save_data = SaveData(coach_name)
-
-    ########-------------------------------------########
-    ########      DOWNLOAD WEEKLY STATS DATA     ########
-    ########-------------------------------------########
-    # download activities csv
-    today_date = datetime.date.today()
-    # the sunday of the week before this week
-    end_date = today_date - datetime.timedelta(days=today_date.weekday()) - datetime.timedelta(days=1)
-    if os.path.exists(f"data/{coach_name}/weekly_stats.csv"):
-        old_weekly_stats_df = pd.read_csv(f"data/{coach_name}/weekly_stats.csv")
-    else:
-        start_date = datetime.datetime.strptime(input("Start date (YYYY-MM-DD): "), "%Y-%m-%d")
-        old_weekly_stats_df = pd.DataFrame()
-    
-    if start_date.date() < end_date:
-        weekly_stats_data = intervals.summary_stats(start_date.date(), end_date)
-        # list of athletes
-        athletes = []
-        for athlete, data in credentials_info.items():
-            athletes.append(data['icu_name'])
-            # save data for every athlete
-        for athlete in athletes:
-            save_data.weekly_stats_data(weekly_stats_data, athlete, old_weekly_stats_df)
-
-
-    #---------------------------------------------------#
-    #---------------------------------------------------#
-    date = datetime.datetime.today() - datetime.timedelta(days=datetime.datetime.today().weekday()) - datetime.timedelta(days=7)
-    date_string = date.strftime("%Y-%m-%d")
-    for key, values in credentials_info.items():
-        if values['role']=='coach':
-            coach_name = key
-        athlete_name = values['icu_name']
-        email_com = WriteEmail(athlete_name, date_string)
-        print(f"Sending email to {athlete_name}")
-        email_com.send_email(credentials_info, athlete_name, date_string, coach_name)
+    # Cloud Run inyecta la variable PORT, si no existe usa 8080
+    port = int(os.environ.get("PORT", 8080))
+    # '0.0.0.0' es obligatorio para que sea accesible
+    app.run(host='0.0.0.0', port=port)
