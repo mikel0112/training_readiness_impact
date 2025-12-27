@@ -1,20 +1,23 @@
 FROM ubuntu:20.04
 
-# Evita preguntas interactivas durante la instalación
+# Evita que la instalación se detenga pidiendo zona horaria
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt update && apt install -y python3-pip
+# Instalamos python, pip y herramientas de compilación básicas
+RUN apt-get update && apt-get install -y \
+    python3-pip \
+    python3-dev \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# 1. Definir dónde vamos a trabajar dentro del contenedor
 WORKDIR /app
 
-# 2. Copiar TODO el contenido de tu repo al contenedor
+# Copiamos los archivos
 COPY . .
 
-# 3. Instalar dependencias (ahora que ya se copiaron)
-RUN pip3 install -r requirements.txt
+# Actualizamos pip e instalamos los requisitos
+RUN pip3 install --upgrade pip
+RUN pip3 install --no-cache-dir -r requirements.txt
 
-# 4. Ejecutar el script (ajusta la ruta si está dentro de src/)
-
-# SI TU ARCHIVO ESTÁ DENTRO DE LA CARPETA SRC, USA ESTA LÍNEA EN SU LUGAR:
+# Ejecutamos el script (ajusta la ruta si está en src/)
 CMD ["python3", "src/weekly_summary_email.py"]
