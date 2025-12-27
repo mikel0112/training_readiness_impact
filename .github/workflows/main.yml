@@ -21,6 +21,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./Dockerfile
           push: true
           # Cambia "mi-usuario-docker" por tu nombre real de Docker Hub si quieres
           tags: ${{ secrets.DOCKER_USERNAME }}/mi-app-web:latest
