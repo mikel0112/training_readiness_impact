@@ -14,6 +14,7 @@ if dir_actual not in sys.path:
 from down_data_intervals import Intervals, SaveData
 from flask import Flask
 import threading
+import time
 
 
 app = Flask(__name__)
@@ -210,6 +211,7 @@ def home():
     # hasta que la función termine de enviar todo.
     try:
         ejecutar_proceso_completo()
+        time.sleep(10)
         return "Emails enviados correctamente.", 200
     except Exception as e:
         print(f"Error en el envío: {e}")
