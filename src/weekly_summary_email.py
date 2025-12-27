@@ -200,11 +200,10 @@ def ejecutar_proceso_completo():
         print(f"Error: {e}")
 
 @app.route("/")
-def index():
-    # Ejecutamos en segundo plano para que Cloud Run reciba el OK de inmediato
-    thread = threading.Thread(target=ejecutar_proceso_completo)
-    thread.start()
-    return "Tarea recibida. Procesando envío de correos...", 200
+def home():
+    # Lanzamos el proceso en segundo plano para no bloquear la respuesta
+    threading.Thread(target=ejecutar_proceso_completo).start()
+    return "Servidor activo. Proceso de envío iniciado.", 200
 
 if __name__ == "__main__":
     
