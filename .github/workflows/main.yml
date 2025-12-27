@@ -2,10 +2,10 @@ name: Build and Push to Docker Hub
 
 on:
   push:
-    branches: [ "main" ] # Se ejecutará cada vez que guardes cambios en la rama main
+    branches: [ "main" ]
 
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -14,14 +14,15 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
+          # IMPORTANTE: Asegúrate de que los nombres coincidan con tus Secrets
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Docker image
+      - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
-          # Cambia "mi-usuario-docker" por tu nombre real de Docker Hub si quieres
-          tags: ${{ secrets.DOCKER_USERNAME }}/mi-app-web:latest
+          # Cambia 'mi-imagen' por el nombre que quieras que tenga en Docker Hub
+          tags: ${{ secrets.DOCKER_USERNAME }}/mi-imagen:latest
