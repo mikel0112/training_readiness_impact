@@ -3,8 +3,9 @@ from fpdf import FPDF
 from redmail import gmail
 import matplotlib.pyplot as plt
 import json
-
-
+import pandas as pd
+import datetime
+import numpy as np
 
 
 class ReporteDeportista(FPDF):
@@ -18,8 +19,8 @@ class ReporteDeportista(FPDF):
         self.cell(0, 10, f"Resumen de Rendimiento: {self.athlete_name}", 0, 1, "C")
         self.ln(5)
 
-def generar_pdf_deportista(nombre_archivo):
-        pdf = ReporteDeportista()
+def generar_pdf_deportista(nombre_archivo, athlete_name):
+        pdf = ReporteDeportista(athlete_name)
         pdf.add_page()
         pdf.set_font("helvetica", size=12)
 
@@ -29,9 +30,9 @@ def generar_pdf_deportista(nombre_archivo):
 
         # Listado de imágenes a incluir
         graficos = [
-            ("1. Intensidad de Entrenamiento", "outputs/email/form.png"),
-            ("2. Comparativa Semanal", "outputs/email/hours.png"),
-            ("3. Distribución de Zonas", "outputs/email/zones.png")
+            ("1. Intensidad de Entrenamiento", f"outputs/{athlete_name}/email/form.png"),
+            ("2. Comparativa Semanal", f"outputs/{athlete_name}/email/hours.png"),
+            ("3. Distribución de Zonas", f"outputs/{athlete_name}/email/zones.png")
         ]
 
         for titulo, ruta in graficos:
@@ -45,35 +46,12 @@ def generar_pdf_deportista(nombre_archivo):
 
         pdf.output(nombre_archivo)
 class WriteEmail():
-    def __init__(
-            self, 
-            athlete_name, 
-            start_week_date,
-            fin_week_date, total_hours,
-            total_distance, 
-            total_elevation_gain, 
-            form, 
-            ramp,
-            time_zones, 
-            run_hours, 
-            ride_hours, 
-            other_hours
-        ):
+    def __init__(self, athlete_name, date):
         self.athlete_name = athlete_name
-        self.start_week_date = start_week_date
-        self.fin_week_date = fin_week_date
-        self.total_hours = total_hours
-        self.total_distance = total_distance
-        self.form = form
-        self.ramp = ramp
-        self.total_elevation_gain = total_elevation_gain
-        self.time_zones = time_zones
-        self.run_hours = run_hours
-        self.ride_hours = ride_hours
-        self.other_hours = other_hours
-    
-
+        self.date = date
+        self.data = pd.read_csv(f"data/{self.athlete_name}/weekly_stats.csv")
     def form_chart(self):
+        form = self.data['form'].loc[self.data["date"] == self.date].values[0]
         # fill the back space with different colors based on y values horizontally
         fig = plt.figure(figsize=(10, 5))
         ax = fig.add_subplot(1, 1, 1)
@@ -85,7 +63,7 @@ class WriteEmail():
         ax.axhspan(20, 100, facecolor='yellow', alpha=0.5)
 
         # graph the form bar vertically
-        ax.bar(1, self.form, color='black', width=0.5)
+        ax.bar(1, form, color='black', width=0.5)
         ax.set_xlim(0, 2)
         ax.set_ylim(-100, 100)
         ax.set_yticks([-100, -30, -10, 5, 20, 100])
@@ -96,38 +74,42 @@ class WriteEmail():
         ax.spines['right'].set_visible(False)
         ax.spines['left'].set_visible(False)
         ax.spines['bottom'].set_visible(False)
-        os.makedirs("outputs/email",exist_ok=True)
-        plt.savefig("outputs/email/form.png", bbox_inches='tight')
+        os.makedirs(f"outputs/{self.athlete_name}/email",exist_ok=True)
+        plt.savefig(f"outputs/{self.athlete_name}/email/form.png", bbox_inches='tight')
         plt.close()
     
     def hours_pie_chart(self):
         labels = 'Run', 'Ride', 'Other'
-        sizes = [self.run_hours, self.ride_hours, self.other_hours]
+        run_hours = self.data['run_time'].loc[self.data["date"] == self.date].values[0]
+        ride_hours = self.data['ride_time'].loc[self.data["date"] == self.date].values[0]
+        other_hours = self.data['strength_time'].loc[self.data["date"] == self.date].values[0]
+        sizes = [run_hours, ride_hours, other_hours]
+        # if value nan convert to 0 use numpy
+        sizes = np.nan_to_num(sizes)
         explode = (0, 0, 0.1)
         fig1, ax1 = plt.subplots()
         ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%',
                 shadow=True, startangle=90)
         ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-        plt.savefig("outputs/email/hours.png", bbox_inches='tight')
+        plt.savefig(f"outputs/{self.athlete_name}/email/hours.png", bbox_inches='tight')
         plt.close()
     
     def zones_cumulative_bar_chart(self):
-        total_time= sum(self.time_zones)
-        z1_per= self.time_zones[0]/total_time*100
-        z2_per= self.time_zones[1]/total_time*100
-        z3_per= self.time_zones[2]/total_time*100
-        z4_per= self.time_zones[3]/total_time*100
-        z5_per= self.time_zones[4]/total_time*100   
-        z6_per= self.time_zones[5]/total_time*100
-        z7_per= self.time_zones[6]/total_time*100
+        z1_per = self.data['Z_1'].loc[self.data["date"] == self.date].values[0]
+        z2_per = self.data['Z_2'].loc[self.data["date"] == self.date].values[0]
+        z3_per = self.data['Z_3'].loc[self.data["date"] == self.date].values[0]
+        z4_per = self.data['Z_4'].loc[self.data["date"] == self.date].values[0]
+        z5_per = self.data['Z_5'].loc[self.data["date"] == self.date].values[0]
+        z6_per = self.data['Z_6'].loc[self.data["date"] == self.date].values[0]
+        z7_per = self.data['Z_7'].loc[self.data["date"] == self.date].values[0]
 
         # graph in bars each in a personalizeed color
         plt.figure(figsize=(10, 5))
         plt.bar(['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5', 'Zone 6', 'Zone 7'], [z1_per, z2_per, z3_per, z4_per, z5_per, z6_per, z7_per], color=['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink'])
-        plt.savefig("outputs/email/zones.png", bbox_inches='tight')
+        plt.savefig(f"outputs/{self.athlete_name}/email/zones.png", bbox_inches='tight')
         plt.close()
 
-    def send_email(self, info, athlete_name):
+    def send_email(self, info, athlete_name, date, coach_name):
 
         self.form_chart()
         self.hours_pie_chart()
@@ -135,18 +117,22 @@ class WriteEmail():
 
         # pdf
         athlete_name_unified = athlete_name.replace(" ", "_")
-        pdf_output = f"outputs/email/{athlete_name_unified}.pdf"
-        generar_pdf_deportista(pdf_output)
+        pdf_output = f"outputs/{athlete_name}/email/{date}.pdf"
+        generar_pdf_deportista(pdf_output, athlete_name)
 
         with open(pdf_output, "rb") as f:
             contenido_pdf = f.read()
         # email
-        gmail.user_name = info[athlete_name]["email"]
-        gmail.password = info[athlete_name]["email_pass"]
+        gmail.user_name = info[coach_name]["email"]
+        gmail.password = info[coach_name]["email_pass"]
+
+        for key,values in info.items():
+            if values['icu_name'] == athlete_name:
+                correo = values['email']
         
         gmail.send(
             subject="Estadísticas semanales de " + athlete_name,
-            receivers=[gmail.user_name],
+            receivers=[correo],
             html=f"<p>Hola {athlete_name}, adjunto encontrarás tu reporte de rendimiento en PDF.</p>",
             attachments={
                 "Reporte_Rendimiento.pdf": contenido_pdf
@@ -155,12 +141,18 @@ class WriteEmail():
 
 if __name__ == "__main__":
     
-    communication_info = json.load("docs/p_info.json")
-    for key in communication_info.keys():
-        if communication_info[key]["role"] == "coach":
+    """
+    hay que añadir un temporizador para que se ejecute automatico
+    todos los domingos a las 21:00
+    """
+    communication_info = json.load(open("docs/p_info.json"))
+    date = datetime.datetime.today() - datetime.timedelta(days=datetime.datetime.today().weekday()) - datetime.timedelta(days=7)
+    date_string = date.strftime("%Y-%m-%d")
+    for key, values in communication_info.items():
+        if values['role']=='coach':
             coach_name = key
-
-            
-            athlete_name = key
-            print(f"Sending email to {athlete_name}")
-            weekly_summary_email = WeeklySummaryEmail(athlete_name)
+        athlete_name = values['icu_name']
+        email_com = WriteEmail(athlete_name, date_string)
+        print(f"Sending email to {athlete_name}")
+        if athlete_name == 'Josu Campo':
+            email_com.send_email(communication_info, athlete_name, date_string, coach_name)
