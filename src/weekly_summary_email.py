@@ -201,9 +201,14 @@ def ejecutar_proceso_completo():
 
 @app.route("/")
 def home():
-    # Lanzamos el proceso en segundo plano para no bloquear la respuesta
-    threading.Thread(target=ejecutar_proceso_completo).start()
-    return "Servidor activo. Proceso de envío iniciado.", 200
+    # Eliminamos el Threading para que Cloud Run mantenga la CPU activa
+    # hasta que la función termine de enviar todo.
+    try:
+        ejecutar_proceso_completo()
+        return "Emails enviados correctamente.", 200
+    except Exception as e:
+        print(f"Error en el envío: {e}")
+        return f"Error: {e}", 500
 
 if __name__ == "__main__":
     
