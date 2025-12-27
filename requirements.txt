@@ -11,3 +11,6 @@ mlxtend
 openpyxl
 albumentations
 redmail
+mysql-connector-python
+fpdf2
+mysql-connector-python

@@ -474,32 +474,4 @@ if __name__ == "__main__":
 
     #---------------------------------------------------#
     #---------------------------------------------------#
-
-
-    ########-------------------------------------########
-    ########      DOWNLOAD WEEKLY STATS DATA     ########
-    ########-------------------------------------########
-    # download activities csv
-    today_date = datetime.date.today()
-    # the sunday of the week before this week
-    end_date = today_date - datetime.timedelta(days=today_date.weekday()) - datetime.timedelta(days=1)
-    if os.path.exists(f"data/{coach_name}/weekly_stats.csv"):
-        old_weekly_stats_df = pd.read_csv(f"data/{coach_name}/weekly_stats.csv")
-    else:
-        start_date = datetime.datetime.strptime(input("Start date (YYYY-MM-DD): "), "%Y-%m-%d")
-        old_weekly_stats_df = pd.DataFrame()
-    
-    if start_date.date() < end_date:
-        weekly_stats_data = intervals.summary_stats(start_date.date(), end_date)
-        # list of athletes
-        athletes = []
-        for athlete, data in credentials_info.items():
-            athletes.append(data['icu_name'])
-            # save data for every athlete
-        for athlete in athletes:
-            save_data.weekly_stats_data(weekly_stats_data, athlete, old_weekly_stats_df)
-
-
-    #---------------------------------------------------#
-    #---------------------------------------------------#
     
