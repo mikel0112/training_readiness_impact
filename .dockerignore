@@ -5,3 +5,6 @@ __pycache__/
 .github/
 *.md
 .DS_Store
+data/
+outputs/
+EOF
