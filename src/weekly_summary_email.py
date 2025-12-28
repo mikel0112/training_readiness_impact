@@ -8,6 +8,7 @@ import datetime
 import numpy as np
 import sys
 import logging
+from google.cloud import secretmanager
 
 # Configurar logging
 logging.basicConfig(
@@ -15,6 +16,21 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+def get_credentials_from_secret():
+    """Lee las credenciales desde Google Secret Manager"""
+    try:
+        client = secretmanager.SecretManagerServiceClient()
+        project_id = "weeklytrainingemail"
+        secret_id = "p-info-json"
+        name = f"projects/{project_id}/secrets/{secret_id}/versions/latest"
+        
+        response = client.access_secret_version(request={"name": name})
+        secret_data = response.payload.data.decode("UTF-8")
+        return json.loads(secret_data)
+    except Exception as e:
+        logger.error(f"Error al leer credenciales desde Secret Manager: {e}")
+        raise
 
 # Esto le dice a Python que busque archivos en la carpeta actual del script
 dir_actual = os.path.dirname(os.path.abspath(__file__))
@@ -193,9 +209,10 @@ def ejecutar_proceso_completo():
         logger.info("INICIANDO PROCESO DE DATOS Y ENVÍO")
         logger.info("="*60)
         
-        # get credentials
-        logger.info("Cargando credenciales...")
-        credentials_info = json.load(open("docs/p_info.json"))
+        # get credentials from Secret Manager
+        logger.info("Cargando credenciales desde Secret Manager...")
+        credentials_info = get_credentials_from_secret()
+        logger.info("✓ Credenciales cargadas exitosamente")
         
         for user, data in credentials_info.items():
             if data['role'] == "coach":

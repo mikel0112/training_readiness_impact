@@ -4,3 +4,4 @@ pandas
 matplotlib
 redmail
 flask
+google-cloud-secret-manager
