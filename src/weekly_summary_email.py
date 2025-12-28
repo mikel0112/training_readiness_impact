@@ -245,7 +245,7 @@ def ejecutar_proceso_completo():
         
         if old_weekly_stats_df is not None and not old_weekly_stats_df.empty:
             try:
-                start_date = pd.to_datetime(old_weekly_stats_df['date'].max()) + datetime.timedelta(days=1)
+                start_date = datetime.datetime.strptime(old_weekly_stats_df['date'].max()) + datetime.timedelta(days=1)
                 logger.info(f"Archivo existente encontrado en GCS. Fecha inicio: {start_date}")
             except Exception as e:
                 logger.warning(f"Error al procesar fecha: {e}. Descargando últimos 90 días...")
