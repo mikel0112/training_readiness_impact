@@ -9,6 +9,11 @@ import numpy as np
 import sys
 import logging
 from google.cloud import secretmanager
+from down_data_intervals import Intervals, SaveData, read_csv_from_gcs, save_csv_to_gcs
+from flask import Flask
+import threading
+import time
+
 
 # Configurar logging
 logging.basicConfig(
@@ -36,10 +41,6 @@ def get_credentials_from_secret():
 dir_actual = os.path.dirname(os.path.abspath(__file__))
 if dir_actual not in sys.path:
     sys.path.append(dir_actual)
-from down_data_intervals import Intervals, SaveData, read_csv_from_gcs, save_csv_to_gcs
-from flask import Flask
-import threading
-import time
 
 
 app = Flask(__name__)
