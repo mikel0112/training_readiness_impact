@@ -1,8 +1,9 @@
 fpdf2
-numpy
-pandas
-matplotlib
 redmail
-flask
+matplotlib
+pandas
+numpy
+requests
+Flask
 google-cloud-secret-manager
 google-cloud-storage
