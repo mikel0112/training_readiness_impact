@@ -258,8 +258,8 @@ def ejecutar_proceso_completo():
             logger.info(f"Archivo nuevo. Descargando últimos 90 días desde: {start_date}")
         
         if start_date.date() <= end_date:
-            logger.info(f"Descargando datos desde {start_date.date()} hasta {end_date}...")
-            weekly_stats_data = intervals.summary_stats(start_date.date(), end_date)
+            logger.info(f"Descargando datos desde {start_date} hasta {end_date}...")
+            weekly_stats_data = intervals.summary_stats(start_date, end_date)
             logger.info("✓ Datos descargados")
             
             # list of athletes
