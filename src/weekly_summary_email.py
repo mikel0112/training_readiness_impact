@@ -7,6 +7,15 @@ import pandas as pd
 import datetime
 import numpy as np
 import sys
+import logging
+
+# Configurar logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 # Esto le dice a Python que busque archivos en la carpeta actual del script
 dir_actual = os.path.dirname(os.path.abspath(__file__))
 if dir_actual not in sys.path:
@@ -56,11 +65,13 @@ def generar_pdf_deportista(nombre_archivo, athlete_name):
                 pdf.ln(10)
 
         pdf.output(nombre_archivo)
+
 class WriteEmail():
     def __init__(self, athlete_name, date):
         self.athlete_name = athlete_name
         self.date = date
         self.data = pd.read_csv(f"data/{self.athlete_name}/weekly_stats.csv")
+    
     def form_chart(self):
         form = self.data['form'].loc[self.data["date"] == self.date].values[0]
         # fill the back space with different colors based on y values horizontally
@@ -116,115 +127,186 @@ class WriteEmail():
 
         # graph in bars each in a personalizeed color
         plt.figure(figsize=(10, 5))
-        plt.bar(['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5', 'Zone 6', 'Zone 7'], [z1_per, z2_per, z3_per, z4_per, z5_per, z6_per, z7_per], color=['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink'])
+        plt.bar(['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5', 'Zone 6', 'Zone 7'], 
+                [z1_per, z2_per, z3_per, z4_per, z5_per, z6_per, z7_per], 
+                color=['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink'])
         plt.savefig(f"outputs/{self.athlete_name}/email/zones.png", bbox_inches='tight')
         plt.close()
 
     def send_email(self, info, athlete_name, date, coach_name):
+        try:
+            logger.info(f"[INICIO] Preparando email para {athlete_name}")
+            
+            logger.info("Generando gráfico de forma...")
+            self.form_chart()
+            logger.info("✓ Gráfico de forma generado")
+            
+            logger.info("Generando gráfico de horas...")
+            self.hours_pie_chart()
+            logger.info("✓ Gráfico de horas generado")
+            
+            logger.info("Generando gráfico de zonas...")
+            self.zones_cumulative_bar_chart()
+            logger.info("✓ Gráfico de zonas generado")
 
-        self.form_chart()
-        self.hours_pie_chart()
-        self.zones_cumulative_bar_chart()
+            # pdf
+            athlete_name_unified = athlete_name.replace(" ", "_")
+            pdf_output = f"outputs/{athlete_name}/email/{date}.pdf"
+            logger.info(f"Generando PDF: {pdf_output}")
+            generar_pdf_deportista(pdf_output, athlete_name)
+            logger.info(f"✓ PDF generado correctamente")
 
-        # pdf
-        athlete_name_unified = athlete_name.replace(" ", "_")
-        pdf_output = f"outputs/{athlete_name}/email/{date}.pdf"
-        generar_pdf_deportista(pdf_output, athlete_name)
+            with open(pdf_output, "rb") as f:
+                contenido_pdf = f.read()
+            logger.info(f"✓ PDF leído, tamaño: {len(contenido_pdf)} bytes")
+            
+            # email
+            gmail.user_name = info[coach_name]["email"]
+            gmail.password = info[coach_name]["email_pass"]
+            logger.info(f"Configurando Gmail con usuario: {gmail.user_name}")
 
-        with open(pdf_output, "rb") as f:
-            contenido_pdf = f.read()
-        # email
-        gmail.user_name = info[coach_name]["email"]
-        gmail.password = info[coach_name]["email_pass"]
-
-        for key,values in info.items():
-            if values['icu_name'] == athlete_name:
-                correo = values['email']
-        
-        gmail.send(
-            subject="Estadísticas semanales de " + athlete_name,
-            receivers=[correo],
-            html=f"<p>Hola {athlete_name}, adjunto encontrarás tu reporte de rendimiento en PDF.</p>",
-            attachments={
-                "Reporte_Rendimiento.pdf": contenido_pdf
-            }
-        )
+            for key,values in info.items():
+                if values['icu_name'] == athlete_name:
+                    correo = values['email']
+                    logger.info(f"Email destino encontrado: {correo}")
+            
+            logger.info(f"Enviando email a {correo}...")
+            gmail.send(
+                subject="Estadísticas semanales de " + athlete_name,
+                receivers=[correo],
+                html=f"<p>Hola {athlete_name}, adjunto encontrarás tu reporte de rendimiento en PDF.</p>",
+                attachments={
+                    "Reporte_Rendimiento.pdf": contenido_pdf
+                }
+            )
+            logger.info(f"✓✓✓ EMAIL ENVIADO EXITOSAMENTE a {athlete_name} ✓✓✓")
+            
+        except Exception as e:
+            import traceback
+            logger.error(f"❌ ERROR al enviar email a {athlete_name}: {e}")
+            logger.error(traceback.format_exc())
+            raise
 
 def ejecutar_proceso_completo():
     try:
-        print("Iniciando proceso de datos y envío...")
+        logger.info("="*60)
+        logger.info("INICIANDO PROCESO DE DATOS Y ENVÍO")
+        logger.info("="*60)
+        
         # get credentials
+        logger.info("Cargando credenciales...")
         credentials_info = json.load(open("docs/p_info.json"))
+        
         for user, data in credentials_info.items():
             if data['role'] == "coach":
                 coach_name = user
+                logger.info(f"Coach identificado: {coach_name}")
+        
         coach_id = credentials_info[coach_name]["id"]
         api_key = credentials_info[coach_name]["password"]
 
         intervals = Intervals(coach_id, api_key)
         save_data = SaveData(coach_name)
+        logger.info("✓ Objetos Intervals y SaveData creados")
 
         ########-------------------------------------########
         ########      DOWNLOAD WEEKLY STATS DATA     ########
         ########-------------------------------------########
-        # download activities csv
+        logger.info("Descargando estadísticas semanales...")
         today_date = datetime.date.today()
-        # the sunday of the week before this week
         end_date = today_date - datetime.timedelta(days=today_date.weekday()) - datetime.timedelta(days=1)
+        logger.info(f"Fecha fin: {end_date}")
+        
         if os.path.exists(f"data/{coach_name}/weekly_stats.csv"):
             old_weekly_stats_df = pd.read_csv(f"data/{coach_name}/weekly_stats.csv")
             start_date = old_weekly_stats_df['date'].max()+ datetime.timedelta(days=1)
+            logger.info(f"Archivo existente encontrado. Fecha inicio: {start_date}")
         else:
             start_date = end_date - datetime.timedelta(days=30)
             old_weekly_stats_df = pd.DataFrame()
+            logger.info(f"Archivo nuevo. Fecha inicio: {start_date}")
         
         if start_date.date() < end_date:
+            logger.info(f"Descargando datos desde {start_date.date()} hasta {end_date}...")
             weekly_stats_data = intervals.summary_stats(start_date.date(), end_date)
+            logger.info("✓ Datos descargados")
+            
             # list of athletes
             athletes = []
             for athlete, data in credentials_info.items():
-                athletes.append(data['icu_name'])
-                # save data for every athlete
+                if 'icu_name' in data:
+                    athletes.append(data['icu_name'])
+            logger.info(f"Atletas encontrados: {athletes}")
+            
+            # save data for every athlete
             for athlete in athletes:
+                logger.info(f"Guardando datos para {athlete}...")
                 save_data.weekly_stats_data(weekly_stats_data, athlete, old_weekly_stats_df)
-
+                logger.info(f"✓ Datos guardados para {athlete}")
+        else:
+            logger.info("No hay nuevos datos para descargar")
 
         #---------------------------------------------------#
         #---------------------------------------------------#
+        logger.info("\n" + "="*60)
+        logger.info("INICIANDO ENVÍO DE EMAILS")
+        logger.info("="*60)
+        
         date = datetime.datetime.today() - datetime.timedelta(days=datetime.datetime.today().weekday()) - datetime.timedelta(days=7)
         date_string = date.strftime("%Y-%m-%d")
+        logger.info(f"Fecha de reporte: {date_string}")
+        
+        email_count = 0
         for key, values in credentials_info.items():
             if values['role']=='coach':
                 coach_name = key
-            athlete_name = values['icu_name']
-            email_com = WriteEmail(athlete_name, date_string)
-            print(f"Sending email to {athlete_name}")
-            email_com.send_email(credentials_info, athlete_name, date_string, coach_name)
+            if 'icu_name' in values:
+                athlete_name = values['icu_name']
+                logger.info(f"\n--- Procesando atleta #{email_count+1}: {athlete_name} ---")
+                email_com = WriteEmail(athlete_name, date_string)
+                email_com.send_email(credentials_info, athlete_name, date_string, coach_name)
+                email_count += 1
+                logger.info(f"--- Finalizado atleta {athlete_name} ---\n")
 
-        print("Proceso finalizado con éxito.")
+        logger.info("="*60)
+        logger.info(f"✓✓✓ PROCESO FINALIZADO CON ÉXITO - {email_count} emails enviados ✓✓✓")
+        logger.info("="*60)
+        
     except Exception as e:
-        print(f"Error: {e}")
+        import traceback
+        logger.error("="*60)
+        logger.error("❌❌❌ ERROR EN EL PROCESO ❌❌❌")
+        logger.error(f"Error: {e}")
+        logger.error(traceback.format_exc())
+        logger.error("="*60)
+        raise
 
 @app.route("/")
 def home():
-    # Eliminamos el Threading para que Cloud Run mantenga la CPU activa
-    # hasta que la función termine de enviar todo.
     try:
+        logger.info("\n" + "#"*60)
+        logger.info("### PETICIÓN RECIBIDA DEL SCHEDULER ###")
+        logger.info("#"*60 + "\n")
+        
         ejecutar_proceso_completo()
-        #sleep 10 segundos
+        
+        logger.info("\n### Esperando 10 segundos antes de responder... ###")
         time.sleep(10)
+        
+        logger.info("### RESPUESTA ENVIADA AL SCHEDULER ###\n")
         return "Emails enviados correctamente.", 200
+        
     except Exception as e:
-        print(f"Error en el envío: {e}")
+        import traceback
+        logger.error(f"\n❌ ERROR EN EL ENDPOINT: {e}")
+        logger.error(traceback.format_exc())
         return f"Error: {e}", 500
 
+@app.route("/health")
+def health():
+    return "OK", 200
+
 if __name__ == "__main__":
-    
-    """
-    hay que añadir un temporizador para que se ejecute automatico
-    todos los domingos a las 21:00
-    """
-    # Cloud Run inyecta la variable PORT, si no existe usa 8080
     port = int(os.environ.get("PORT", 8080))
-    # '0.0.0.0' es obligatorio para que sea accesible
+    logger.info(f"Iniciando Flask app en puerto {port}")
     app.run(host='0.0.0.0', port=port)

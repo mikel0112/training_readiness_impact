@@ -1,312 +1,478 @@
+import datetime
+import json
+import requests
+import pandas as pd
+import numpy as np
 import os
-from fpdf import FPDF
 from redmail import gmail
 import matplotlib.pyplot as plt
-import json
-import pandas as pd
-import datetime
-import numpy as np
-import sys
-import logging
-
-# Configurar logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-# Esto le dice a Python que busque archivos en la carpeta actual del script
-dir_actual = os.path.dirname(os.path.abspath(__file__))
-if dir_actual not in sys.path:
-    sys.path.append(dir_actual)
-from src.down_data_intervals import Intervals, SaveData
-from flask import Flask
-import threading
-import time
+import os
+from pathlib import Path
+from fpdf import FPDF
 
 
-app = Flask(__name__)
+class Intervals:
+    """ """
 
-class ReporteDeportista(FPDF):
+    BASE_URL = "https://intervals.icu"
 
-    def __init__(self, athlete_name):
-        super().__init__()
-        self.athlete_name = athlete_name
+    def __init__(self, athlete_id, api_key, session=None):
+        """ """
+        self.athlete_id = athlete_id
+        self.password = api_key
+        self.session = session
 
-    def header(self):
-        self.set_font("helvetica", "B", 15)
-        self.cell(0, 10, f"Resumen de Rendimiento: {self.athlete_name}", 0, 1, "C")
-        self.ln(5)
+    def _get_session(self):
+        if self.session is not None:
+            return self.session
 
-def generar_pdf_deportista(nombre_archivo, athlete_name):
-        pdf = ReporteDeportista(athlete_name)
-        pdf.add_page()
-        pdf.set_font("helvetica", size=12)
+        self.session = requests.Session()
 
-        # Introducción
-        pdf.multi_cell(0, 10, "Hola,\nAquí tienes el análisis visual y las estadísticas correspondientes a la última sesión. Los datos muestran un progreso constante.")
-        pdf.ln(5)
+        self.session.auth = ("API_KEY", self.password)
+        return self.session
 
-        # Listado de imágenes a incluir
-        graficos = [
-            ("1. Intensidad de Entrenamiento", f"outputs/{athlete_name}/email/form.png"),
-            ("2. Comparativa Semanal", f"outputs/{athlete_name}/email/hours.png"),
-            ("3. Distribución de Zonas", f"outputs/{athlete_name}/email/zones.png")
-        ]
+    def _make_request(self, method, url, params=None):
+        session = self._get_session()
 
-        for titulo, ruta in graficos:
-            if os.path.exists(ruta):
-                pdf.set_font("helvetica", "B", 12)
-                pdf.cell(0, 10, titulo, 0, 1)
-                
-                # Insertar imagen (ajustando ancho a 180mm)
-                pdf.image(ruta, x=15, w=180)
-                pdf.ln(10)
+        res = session.request(method, url, params=params)
 
-        pdf.output(nombre_archivo)
+        if res.status_code != 200:
+            raise Exception("Error on request:" + str(res))
 
-class WriteEmail():
-    def __init__(self, athlete_name, date):
-        self.athlete_name = athlete_name
-        self.date = date
-        self.data = pd.read_csv(f"data/{self.athlete_name}/weekly_stats.csv")
-    
-    def form_chart(self):
-        form = self.data['form'].loc[self.data["date"] == self.date].values[0]
-        # fill the back space with different colors based on y values horizontally
-        fig = plt.figure(figsize=(10, 5))
-        ax = fig.add_subplot(1, 1, 1)
-        # dar color al fondo de la grafica
-        ax.axhspan(-100, -30, facecolor='red', alpha=0.5)
-        ax.axhspan(-30, -10, facecolor='green', alpha=0.5)
-        ax.axhspan(-10, 5, facecolor='gray', alpha=0.5)
-        ax.axhspan(5, 20, facecolor='blue', alpha=0.5)
-        ax.axhspan(20, 100, facecolor='yellow', alpha=0.5)
+        return res
 
-        # graph the form bar vertically
-        ax.bar(1, form, color='black', width=0.5)
-        ax.set_xlim(0, 2)
-        ax.set_ylim(-100, 100)
-        ax.set_yticks([-100, -30, -10, 5, 20, 100])
-        ax.set_yticklabels(['-100', '-30', '-10', '5', '20', '100'])
-        ax.set_xticks([])
-        ax.set_xticklabels([])
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.spines['left'].set_visible(False)
-        ax.spines['bottom'].set_visible(False)
-        os.makedirs(f"outputs/{self.athlete_name}/email",exist_ok=True)
-        plt.savefig(f"outputs/{self.athlete_name}/email/form.png", bbox_inches='tight')
-        plt.close()
-    
-    def hours_pie_chart(self):
-        labels = 'Run', 'Ride', 'Other'
-        run_hours = self.data['run_time'].loc[self.data["date"] == self.date].values[0]
-        ride_hours = self.data['ride_time'].loc[self.data["date"] == self.date].values[0]
-        other_hours = self.data['strength_time'].loc[self.data["date"] == self.date].values[0]
-        sizes = [run_hours, ride_hours, other_hours]
-        # if value nan convert to 0 use numpy
-        sizes = np.nan_to_num(sizes)
-        explode = (0, 0, 0.1)
-        fig1, ax1 = plt.subplots()
-        ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%',
-                shadow=True, startangle=90)
-        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-        plt.savefig(f"outputs/{self.athlete_name}/email/hours.png", bbox_inches='tight')
-        plt.close()
-    
-    def zones_cumulative_bar_chart(self):
-        z1_per = self.data['Z_1'].loc[self.data["date"] == self.date].values[0]
-        z2_per = self.data['Z_2'].loc[self.data["date"] == self.date].values[0]
-        z3_per = self.data['Z_3'].loc[self.data["date"] == self.date].values[0]
-        z4_per = self.data['Z_4'].loc[self.data["date"] == self.date].values[0]
-        z5_per = self.data['Z_5'].loc[self.data["date"] == self.date].values[0]
-        z6_per = self.data['Z_6'].loc[self.data["date"] == self.date].values[0]
-        z7_per = self.data['Z_7'].loc[self.data["date"] == self.date].values[0]
+    def activities(self, start_date, end_date=None):
+        """
+        Returns all your activities formatted in CSV
 
-        # graph in bars each in a personalizeed color
-        plt.figure(figsize=(10, 5))
-        plt.bar(['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5', 'Zone 6', 'Zone 7'], 
-                [z1_per, z2_per, z3_per, z4_per, z5_per, z6_per, z7_per], 
-                color=['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink'])
-        plt.savefig(f"outputs/{self.athlete_name}/email/zones.png", bbox_inches='tight')
-        plt.close()
+        :return: Text data in CSV format
+        :rtype: str
+        """
+        if type(start_date) is not datetime.date:
+            raise TypeError("dateperrequired")
 
-    def send_email(self, info, athlete_name, date, coach_name):
-        try:
-            logger.info(f"[INICIO] Preparando email para {athlete_name}")
-            
-            logger.info("Generando gráfico de forma...")
-            self.form_chart()
-            logger.info("✓ Gráfico de forma generado")
-            
-            logger.info("Generando gráfico de horas...")
-            self.hours_pie_chart()
-            logger.info("✓ Gráfico de horas generado")
-            
-            logger.info("Generando gráfico de zonas...")
-            self.zones_cumulative_bar_chart()
-            logger.info("✓ Gráfico de zonas generado")
+        params = {}
 
-            # pdf
-            athlete_name_unified = athlete_name.replace(" ", "_")
-            pdf_output = f"outputs/{athlete_name}/email/{date}.pdf"
-            logger.info(f"Generando PDF: {pdf_output}")
-            generar_pdf_deportista(pdf_output, athlete_name)
-            logger.info(f"✓ PDF generado correctamente")
-
-            with open(pdf_output, "rb") as f:
-                contenido_pdf = f.read()
-            logger.info(f"✓ PDF leído, tamaño: {len(contenido_pdf)} bytes")
-            
-            # email
-            gmail.user_name = info[coach_name]["email"]
-            gmail.password = info[coach_name]["email_pass"]
-            logger.info(f"Configurando Gmail con usuario: {gmail.user_name}")
-
-            for key,values in info.items():
-                if values['icu_name'] == athlete_name:
-                    correo = values['email']
-                    logger.info(f"Email destino encontrado: {correo}")
-            
-            logger.info(f"Enviando email a {correo}...")
-            gmail.send(
-                subject="Estadísticas semanales de " + athlete_name,
-                receivers=[correo],
-                html=f"<p>Hola {athlete_name}, adjunto encontrarás tu reporte de rendimiento en PDF.</p>",
-                attachments={
-                    "Reporte_Rendimiento.pdf": contenido_pdf
-                }
+        if end_date is not None:
+            if type(end_date) is not datetime.date:
+                raise TypeError("dateperrequired")
+            end_date = end_date + datetime.timedelta(days=1)
+            params["oldest"] = start_date.isoformat()
+            params["newest"] = end_date.isoformat()
+            url = "{}/api/v1/athlete/{}/activities".format(
+                Intervals.BASE_URL, self.athlete_id
             )
-            logger.info(f"✓✓✓ EMAIL ENVIADO EXITOSAMENTE a {athlete_name} ✓✓✓")
-            
-        except Exception as e:
-            import traceback
-            logger.error(f"❌ ERROR al enviar email a {athlete_name}: {e}")
-            logger.error(traceback.format_exc())
-            raise
-
-def ejecutar_proceso_completo():
-    try:
-        logger.info("="*60)
-        logger.info("INICIANDO PROCESO DE DATOS Y ENVÍO")
-        logger.info("="*60)
-        
-        # get credentials
-        logger.info("Cargando credenciales...")
-        credentials_info = json.load(open("docs/p_info.json"))
-        
-        for user, data in credentials_info.items():
-            if data['role'] == "coach":
-                coach_name = user
-                logger.info(f"Coach identificado: {coach_name}")
-        
-        coach_id = credentials_info[coach_name]["id"]
-        api_key = credentials_info[coach_name]["password"]
-
-        intervals = Intervals(coach_id, api_key)
-        save_data = SaveData(coach_name)
-        logger.info("✓ Objetos Intervals y SaveData creados")
-
-        ########-------------------------------------########
-        ########      DOWNLOAD WEEKLY STATS DATA     ########
-        ########-------------------------------------########
-        logger.info("Descargando estadísticas semanales...")
-        today_date = datetime.date.today()
-        end_date = today_date - datetime.timedelta(days=today_date.weekday()) - datetime.timedelta(days=1)
-        logger.info(f"Fecha fin: {end_date}")
-        
-        if os.path.exists(f"data/{coach_name}/weekly_stats.csv"):
-            old_weekly_stats_df = pd.read_csv(f"data/{coach_name}/weekly_stats.csv")
-            start_date = old_weekly_stats_df['date'].max()+ datetime.timedelta(days=1)
-            logger.info(f"Archivo existente encontrado. Fecha inicio: {start_date}")
         else:
-            start_date = end_date - datetime.timedelta(days=30)
-            old_weekly_stats_df = pd.DataFrame()
-            logger.info(f"Archivo nuevo. Fecha inicio: {start_date}")
-        
-        if start_date.date() < end_date:
-            logger.info(f"Descargando datos desde {start_date.date()} hasta {end_date}...")
-            weekly_stats_data = intervals.summary_stats(start_date.date(), end_date)
-            logger.info("✓ Datos descargados")
-            
-            # list of athletes
-            athletes = []
-            for athlete, data in credentials_info.items():
-                if 'icu_name' in data:
-                    athletes.append(data['icu_name'])
-            logger.info(f"Atletas encontrados: {athletes}")
-            
-            # save data for every athlete
-            for athlete in athletes:
-                logger.info(f"Guardando datos para {athlete}...")
-                save_data.weekly_stats_data(weekly_stats_data, athlete, old_weekly_stats_df)
-                logger.info(f"✓ Datos guardados para {athlete}")
+            url = "{}/api/v1/athlete/{}/activities/{}".format(
+                Intervals.BASE_URL, self.athlete_id, start_date.isoformat()
+            )
+        res = self._make_request("get", url, params)
+        j = res.json()
+        if type(j) is list:
+            result = []
+            for item in j:
+                result.append(item)
+            return result
+
+        return j
+
+    def activities_csv(self):
+        """
+        Returns all your activities formatted in CSV
+
+        :return: Text data in CSV format
+        :rtype: str
+        """
+        url = "{}/api/v1/athlete/{}/activities.csv".format(
+            Intervals.BASE_URL, self.athlete_id
+        )
+        res = self._make_request("get", url)
+        return res.text
+
+    def activity(self, activity_id):
+        """ """
+        url = "{}/api/v1/activity/{}".format(Intervals.BASE_URL, activity_id)
+        res = self._make_request("get", url)
+        return res.json()
+        # return Activity(**res.json())
+
+    def athlete(self, athlete_id):
+        """ """
+        url = "{}/api/v1/athlete/{}".format(Intervals.BASE_URL, athlete_id)
+        res = self._make_request("get", url)
+        fields = res.json()
+        ride = run = swim = other = {}
+        for sport in fields["sportSettings"]:
+            if "Ride" in sport["types"]:
+                ride = sport
+                print("Ride", type(sport))
+            if "Run" in sport["types"]:
+                run = sport
+                print("Run")
+            if "Swim" in sport["types"]:
+                swim = sport
+                print("Swim")
+            if "Other" in sport["types"]:
+                other = sport
+                print("Other")
+        return ride, run, swim, other
+
+    def activitiy_streams(self, activity_id):
+        """
+        Returns all your activities formatted in CSV
+
+        :return: Text data in CSV format
+        :rtype: str
+        """
+        url = "{}/api/v1/activity/{}/streams".format(Intervals.BASE_URL, activity_id)
+        res = self._make_request("get", url)
+        j = res.json()
+        per= []
+        watts = []
+        cadence = []
+        heartrate = []
+        distance = []
+        altitude = []
+        latlng = []
+        velocity_smooth = []
+        temp = []
+        torque = []
+        respiration = []
+        for stream in j:
+            try:
+                if stream["type"] == "time":
+                    per= stream
+                elif stream["type"] == "watts":
+                    watts = stream
+                elif stream["type"] == "cadence":
+                    cadence = stream
+                elif stream["type"] == "heartrate":
+                    heartrate = stream
+                elif stream["type"] == "distance":
+                    distance = stream
+                elif stream["type"] == "altitude":
+                    altitude = stream
+                elif stream["type"] == "latlng":
+                    latlng = stream
+                elif stream["type"] == "velocity_smooth":
+                    velocity_smooth = stream
+                elif stream["type"] == "temp":
+                    temp = stream
+                elif stream["type"] == "torque":
+                    torque = stream
+                elif stream["type"] == "respiration":
+                    respiration = stream
+            except Exception as e:
+                print("Error on activity", activity_id, ":", e)
+
+        return (
+            per,
+            watts,
+            cadence,
+            heartrate,
+            distance,
+            altitude,
+            latlng,
+            velocity_smooth,
+            temp,
+            torque,
+            respiration,
+        )
+
+    def wellness(self, start_date, end_date=None):
+        """ """
+        if type(start_date) is not datetime.date:
+            raise TypeError("dateperrequired")
+
+        params = {}
+
+        if end_date is not None:
+            if type(end_date) is not datetime.date:
+                raise TypeError("dateperrequired")
+
+            params["oldest"] = start_date.isoformat()
+            params["newest"] = end_date.isoformat()
+            url = "{}/api/v1/athlete/{}/wellness".format(
+                Intervals.BASE_URL, self.athlete_id
+            )
         else:
-            logger.info("No hay nuevos datos para descargar")
+            url = "{}/api/v1/athlete/{}/wellness/{}".format(
+                Intervals.BASE_URL, self.athlete_id, start_date.isoformat()
+            )
 
-        #---------------------------------------------------#
-        #---------------------------------------------------#
-        logger.info("\n" + "="*60)
-        logger.info("INICIANDO ENVÍO DE EMAILS")
-        logger.info("="*60)
-        
-        date = datetime.datetime.today() - datetime.timedelta(days=datetime.datetime.today().weekday()) - datetime.timedelta(days=7)
-        date_string = date.strftime("%Y-%m-%d")
-        logger.info(f"Fecha de reporte: {date_string}")
-        
-        email_count = 0
-        for key, values in credentials_info.items():
-            if values['role']=='coach':
-                coach_name = key
-            if 'icu_name' in values:
-                athlete_name = values['icu_name']
-                logger.info(f"\n--- Procesando atleta #{email_count+1}: {athlete_name} ---")
-                email_com = WriteEmail(athlete_name, date_string)
-                email_com.send_email(credentials_info, athlete_name, date_string, coach_name)
-                email_count += 1
-                logger.info(f"--- Finalizado atleta {athlete_name} ---\n")
+        res = self._make_request("get", url, params)
+        j = res.json()
+        if type(j) is list:
+            result = []
+            for item in j:
+                result.append(item)
+            return result
+        return j
 
-        logger.info("="*60)
-        logger.info(f"✓✓✓ PROCESO FINALIZADO CON ÉXITO - {email_count} emails enviados ✓✓✓")
-        logger.info("="*60)
-        
-    except Exception as e:
-        import traceback
-        logger.error("="*60)
-        logger.error("❌❌❌ ERROR EN EL PROCESO ❌❌❌")
-        logger.error(f"Error: {e}")
-        logger.error(traceback.format_exc())
-        logger.error("="*60)
-        raise
+    def workouts(self):
+        """ """
+        url = "{}/api/v1/athlete/{}/workouts".format(
+            Intervals.BASE_URL, self.athlete_id
+        )
 
-@app.route("/")
-def home():
-    try:
-        logger.info("\n" + "#"*60)
-        logger.info("### PETICIÓN RECIBIDA DEL SCHEDULER ###")
-        logger.info("#"*60 + "\n")
-        
-        ejecutar_proceso_completo()
-        
-        logger.info("\n### Esperando 10 segundos antes de responder... ###")
-        time.sleep(10)
-        
-        logger.info("### RESPUESTA ENVIADA AL SCHEDULER ###\n")
-        return "Emails enviados correctamente.", 200
-        
-    except Exception as e:
-        import traceback
-        logger.error(f"\n❌ ERROR EN EL ENDPOINT: {e}")
-        logger.error(traceback.format_exc())
-        return f"Error: {e}", 500
+        res = self._make_request("get", url)
+        j = res.json()
+        if type(j) is list:
+            result = []
+            for item in j:
+                result.append(item)
+            return result
 
-@app.route("/health")
-def health():
-    return "OK", 200
+        raise TypeError("Unexpected result from server")
+
+    def workout(self, workout_id):
+        """ """
+        url = "{}/api/v1/athlete/{}/workouts/{}".format(
+            Intervals.BASE_URL, self.athlete_id, workout_id
+        )
+
+        res = self._make_request("get", url)
+        return res.json()
+
+    def power_curve(
+        self,
+        newest=datetime.datetime.now(),
+        curves="90d",
+        type="Ride",
+        include_ranks=False,
+        sub_max_efforts=0,
+        filters='[{"field_id": "type", "value": ["Ride", "VirtualRide"]}]',
+    ):
+        """ """
+        url = f"{self.BASE_URL}/api/v1/athlete/{self.athlete_id}/power-curves"
+        params = {
+            "curves": curves,
+            "type": type,
+            "includeRanks": include_ranks,
+            "subMaxEfforts": f"{sub_max_efforts}",
+            "filters": filters,
+            "newest": newest.strftime("%Y-%m-%dT%H:%M:%S"),
+        }
+        res = self._make_request("get", url, params=params)
+        return res.json()
+    
+    def summary_stats(self, start_date=None, end_date=None):
+        url = f"{self.BASE_URL}/api/v1/athlete/{self.athlete_id}/athlete-summary"
+        params = {}
+        params["start"] = start_date.isoformat()
+        params["end"] = end_date.isoformat()
+        #params['tags'] = 'Coaching'
+        res = self._make_request("get", url, params=params)
+        return res.json()
+
+
+
+class SaveData:
+    def __init__(self, athlete_name):
+        self.athlete_name = athlete_name
+
+    def wellness_data(self, wellness_data, old_df):
+        wellness_df = pd.DataFrame(wellness_data)
+        interesting_columns = [
+            "id",
+            "rampRate",
+            "weight",
+            "restingHR",
+            "hrv",
+            "sleepSecs",
+            "stress",
+            "motivation",
+            "injury",
+        ]
+        clean_df = wellness_df[interesting_columns]
+        # change column name from id to date
+        clean_df = clean_df.rename(columns={"id": "date"})
+        # sleep values from seconds to hours
+        clean_df["sleepSecs"] = clean_df["sleepSecs"] / 3600
+        # merge data from both dfs
+        wellness_clean_df = pd.concat([old_df, clean_df], ignore_index=True)
+        os.makedirs(f"data/{self.athlete_name}", exist_ok=True)
+        wellness_clean_df.to_csv(f"data/{self.athlete_name}/wellness.csv")
+
+    def activities_data(self, activities_data, old_act_df):
+        df_activities = pd.DataFrame(activities_dict)
+        activities_clean_df = df_activities[[
+            'id',
+            'start_date_local', 
+            'type',
+            'moving_time',
+            'total_elevation_gain',
+            'distance',
+            'average_speed',
+            'max_heartrate',
+            'average_heartrate',
+            'average_cadence',
+            'icu_average_watts',
+            'icu_rpe', 
+            'feel',
+            'icu_efficiency_factor',
+
+        ]]
+        # change date format to datetime.date
+        activities_clean_df['start_date_local'] = pd.to_datetime(activities_clean_df['start_date_local']).dt.date
+        # create session quality column
+        activities_clean_df['session_quality'] = activities_clean_df['feel'] * activities_clean_df['icu_efficiency_factor']
+        # change units to average speed
+        activities_clean_df.loc[activities_clean_df['type'] == 'Ride', 
+                                'average_speed'] = activities_clean_df['average_speed'] * 3.6
+        activities_clean_df.loc[activities_clean_df['type'] == 'Run',
+                                'average_speed'] = 1/(activities_clean_df['average_speed'] * 0.06)
+        activities_clean_df.loc[activities_clean_df['type'] == 'TrailRun',
+                                'average_speed'] = 1/(activities_clean_df['average_speed'] * 0.06)
+        activities_clean_df['moving_time'] = activities_clean_df['moving_time'] / 3600
+        activities_clean_df['distance'] = activities_clean_df['distance'] / 1000
+        # merge data from both dfs
+        activities_clean_df = pd.concat([old_act_df, activities_clean_df], ignore_index=True)
+        os.makedirs(f"data/{self.athlete_name}", exist_ok=True)
+        activities_clean_df.to_csv(f"data/{self.athlete_name}/activities.csv")
+    
+    def weekly_stats_data(self, weekly_stats_data, athlete, old_weekly_stats_df):
+        df_weekly_stats = pd.DataFrame(weekly_stats_data)
+        # save the rows that in a certain column contain athlete name
+        df_weekly_stats = df_weekly_stats[df_weekly_stats['athlete_name'] == athlete]
+        clean_df = df_weekly_stats[[
+            'count',
+            'time',
+            'calories',
+            'total_elevation_gain',
+            'training_load',
+            'distance',
+            'date',
+            'form',
+            'rampRate',
+            'weight',
+            'timeInZones',
+            'byCategory'
+        ]]
+        expanded_columns = pd.DataFrame(clean_df['timeInZones'].tolist(), index=clean_df.index)
+        expanded_columns.columns = [f"Z_{i}" for i in range(1, len(expanded_columns.columns) + 1)]
+        expanded_columns['total'] = expanded_columns.sum(axis=1)
+        total_col = expanded_columns.iloc[:, -1]
+        expanded_columns_percentage = expanded_columns.div(total_col, axis=0)
+        expanded_columns_percentage = expanded_columns_percentage.mul(100)
+        expanded_columns_percentage = expanded_columns_percentage.drop(columns=['total'])
+        clean_df = pd.concat([clean_df, expanded_columns_percentage], axis=1)
+
+        expanded_columns = pd.DataFrame(clean_df['byCategory'].tolist(), index=clean_df.index)
+        rows, cols = expanded_columns.shape
+        types_df = pd.DataFrame(columns=[
+            'run_time',
+            'run_count',
+            'run_elevation_gain',
+            'run_distance',
+            'ride_time',
+            'ride_count',
+            'ride_elevation_gain',
+            'ride_distance',
+            'strength_time',
+            'strength_count',
+            'strength_elevation_gain',
+            'strength_distance'
+        ])
+        for i in range(rows):
+            for j in range(cols):
+                type_dict = expanded_columns.iloc[i, j]
+                if type_dict['category'] == 'Run':
+                    types_df.loc[i, 'run_time'] = type_dict['time']
+                    types_df.loc[i, 'run_count'] = type_dict['count']
+                    types_df.loc[i, 'run_elevation_gain'] = type_dict['total_elevation_gain']
+                    types_df.loc[i, 'run_distance'] = type_dict['distance']
+                elif type_dict['category'] == 'Ride':
+                    types_df.loc[i, 'ride_time'] = type_dict['time']
+                    types_df.loc[i, 'ride_count'] = type_dict['count']
+                    types_df.loc[i, 'ride_elevation_gain'] = type_dict['total_elevation_gain']
+                    types_df.loc[i, 'ride_distance'] = type_dict['distance']
+                elif type_dict['category'] == 'Workout':
+                        types_df.loc[i, 'strength_time'] = type_dict['time']
+                        types_df.loc[i, 'strength_count'] = type_dict['count']
+                        types_df.loc[i, 'strength_elevation_gain'] = type_dict['total_elevation_gain']
+                        types_df.loc[i, 'strength_distance'] = type_dict['distance']
+        
+        index_list = clean_df.index.tolist()
+        types_df.index = index_list
+        clean_df = pd.concat([clean_df, types_df], axis=1)
+
+        # drop unnecessary columns
+        clean_df = clean_df.drop(columns=['timeInZones', 'byCategory'])
+
+        # change columns units
+        clean_df['time'] = clean_df['time'] / 3600
+        clean_df['distance'] = clean_df['distance'] / 1000
+        clean_df['run_time'] = clean_df['run_time'] / 3600
+        clean_df['run_distance'] = clean_df['run_distance'] / 1000
+        clean_df['ride_time'] = clean_df['ride_time'] / 3600
+        clean_df['ride_distance'] = clean_df['ride_distance'] / 1000
+        clean_df['strength_time'] = clean_df['strength_time'] / 3600
+        clean_df['strength_distance'] = clean_df['strength_distance'] / 1000
+
+
+        # merge data from both dfs
+        df_weekly_stats = pd.concat([old_weekly_stats_df, clean_df], ignore_index=True)
+        os.makedirs(f"data/{athlete}", exist_ok=True)
+        df_weekly_stats.to_csv(f"data/{athlete}/weekly_stats.csv")
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    logger.info(f"Iniciando Flask app en puerto {port}")
-    app.run(host='0.0.0.0', port=port)
+
+    # get credentials
+    credentials_info = json.load(open("docs/p_info.json"))
+    for user, data in credentials_info.items():
+        if data['role'] == "coach":
+            coach_name = user
+    coach_id = credentials_info[coach_name]["id"]
+    api_key = credentials_info[coach_name]["password"]
+
+    intervals = Intervals(coach_id, api_key)
+    save_data = SaveData(coach_name)
+
+    ########-------------------------------------########
+    ########      DOWNLOAD WELLNESS DATA         ########
+    ########-------------------------------------########
+
+    # find dates
+    if os.path.exists(f"data/{coach_name}/wellness.csv"):
+        old_wellness_df = pd.read_csv(f"data/{coach_name}/wellness.csv")
+        start_date = old_wellness_df['date'].max()
+        start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+        # add one day to start date
+        start_date = start_date + datetime.timedelta(days=1)
+    else:
+        start_date = datetime.datetime.strptime(input("Start date (YYYY-MM-DD): "), "%Y-%m-%d")
+        old_wellness_df = pd.DataFrame()
+    end_date = datetime.date.today()
+
+    # download
+    if start_date.date() < end_date:
+        wellness_df = intervals.wellness(start_date.date(), end_date)
+
+        # save data
+        save_data.wellness_data(wellness_df, old_wellness_df)
+
+    #---------------------------------------------------#
+    #---------------------------------------------------#
+
+
+    ########-------------------------------------########
+    ########      DOWNLOAD ACTIVITIES DATA       ########
+    ########-------------------------------------########
+    # download activities csv
+    if os.path.exists(f"data/{coach_name}/activities.csv"):
+        old_act_df = pd.read_csv(f"data/{coach_name}/activities.csv")
+        start_date = old_act_df['date'].max()+ datetime.timedelta(days=1)
+    else:
+        start_date = datetime.datetime.strptime(input("Start date (YYYY-MM-DD): "), "%Y-%m-%d")
+        old_act_df = pd.DataFrame()
+
+    if start_date.date() < end_date:
+        activities_dict = intervals.activities(start_date.date(), end_date)
+    
+        # save data
+        save_data.activities_data(activities_dict, old_act_df)
+
+    #---------------------------------------------------#
+    #---------------------------------------------------#
+    
