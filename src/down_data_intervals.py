@@ -404,24 +404,21 @@ class SaveData:
             for j in range(cols):
                 type_dict = expanded_columns.iloc[i, j]
                 if type_dict:
-                    logger.info(f"Category: {type_dict['category']}")
-                else:
-                    logger.info(f"Category: None")
-                if type_dict['category'] == 'Run':
-                    types_df.loc[i, 'run_time'] = type_dict['time']
-                    types_df.loc[i, 'run_count'] = type_dict['count']
-                    types_df.loc[i, 'run_elevation_gain'] = type_dict['total_elevation_gain']
-                    types_df.loc[i, 'run_distance'] = type_dict['distance']
-                elif type_dict['category'] == 'Ride':
-                    types_df.loc[i, 'ride_time'] = type_dict['time']
-                    types_df.loc[i, 'ride_count'] = type_dict['count']
-                    types_df.loc[i, 'ride_elevation_gain'] = type_dict['total_elevation_gain']
-                    types_df.loc[i, 'ride_distance'] = type_dict['distance']
-                elif type_dict['category'] == 'Workout':
-                        types_df.loc[i, 'strength_time'] = type_dict['time']
-                        types_df.loc[i, 'strength_count'] = type_dict['count']
-                        types_df.loc[i, 'strength_elevation_gain'] = type_dict['total_elevation_gain']
-                        types_df.loc[i, 'strength_distance'] = type_dict['distance']
+                    if type_dict['category'] == 'Run':
+                        types_df.loc[i, 'run_time'] = type_dict['time']
+                        types_df.loc[i, 'run_count'] = type_dict['count']
+                        types_df.loc[i, 'run_elevation_gain'] = type_dict['total_elevation_gain']
+                        types_df.loc[i, 'run_distance'] = type_dict['distance']
+                    elif type_dict['category'] == 'Ride':
+                        types_df.loc[i, 'ride_time'] = type_dict['time']
+                        types_df.loc[i, 'ride_count'] = type_dict['count']
+                        types_df.loc[i, 'ride_elevation_gain'] = type_dict['total_elevation_gain']
+                        types_df.loc[i, 'ride_distance'] = type_dict['distance']
+                    elif type_dict['category'] == 'Workout':
+                            types_df.loc[i, 'strength_time'] = type_dict['time']
+                            types_df.loc[i, 'strength_count'] = type_dict['count']
+                            types_df.loc[i, 'strength_elevation_gain'] = type_dict['total_elevation_gain']
+                            types_df.loc[i, 'strength_distance'] = type_dict['distance']
         
         index_list = clean_df.index.tolist()
         types_df.index = index_list
