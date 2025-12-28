@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 dir_actual = os.path.dirname(os.path.abspath(__file__))
 if dir_actual not in sys.path:
     sys.path.append(dir_actual)
-from down_data_intervals import Intervals, SaveData
+from src.down_data_intervals import Intervals, SaveData
 from flask import Flask
 import threading
 import time
