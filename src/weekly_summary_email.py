@@ -86,7 +86,11 @@ class WriteEmail():
     def __init__(self, athlete_name, date):
         self.athlete_name = athlete_name
         self.date = date
-        self.data = pd.read_csv(f"data/{self.athlete_name}/weekly_stats.csv")
+        # Leer CSV desde GCS
+        csv_path = f"data/{self.athlete_name}/weekly_stats.csv"
+        self.data = read_csv_from_gcs(csv_path)
+        if self.data is None:
+            raise FileNotFoundError(f"No se encontró {csv_path} en Cloud Storage")
     
     def form_chart(self):
         form = self.data['form'].loc[self.data["date"] == self.date].values[0]
@@ -234,16 +238,24 @@ def ejecutar_proceso_completo():
         end_date = today_date - datetime.timedelta(days=today_date.weekday()) - datetime.timedelta(days=1)
         logger.info(f"Fecha fin: {end_date}")
         
-        if os.path.exists(f"data/{coach_name}/weekly_stats.csv"):
-            old_weekly_stats_df = pd.read_csv(f"data/{coach_name}/weekly_stats.csv")
-            start_date = old_weekly_stats_df['date'].max()+ datetime.timedelta(days=1)
-            logger.info(f"Archivo existente encontrado. Fecha inicio: {start_date}")
-        else:
-            start_date = end_date - datetime.timedelta(days=30)
-            old_weekly_stats_df = pd.DataFrame()
-            logger.info(f"Archivo nuevo. Fecha inicio: {start_date}")
+        # Leer datos existentes desde GCS
+        weekly_stats_path = f"data/{coach_name}/weekly_stats.csv"
+        old_weekly_stats_df = read_csv_from_gcs(weekly_stats_path)
         
-        if start_date.date() < end_date:
+        if old_weekly_stats_df is not None and not old_weekly_stats_df.empty:
+            try:
+                start_date = pd.to_datetime(old_weekly_stats_df['date'].max()) + datetime.timedelta(days=1)
+                logger.info(f"Archivo existente encontrado en GCS. Fecha inicio: {start_date}")
+            except Exception as e:
+                logger.warning(f"Error al procesar fecha: {e}. Descargando últimos 90 días...")
+                start_date = end_date - datetime.timedelta(days=90)
+                old_weekly_stats_df = pd.DataFrame()
+        else:
+            start_date = end_date - datetime.timedelta(days=90)
+            old_weekly_stats_df = pd.DataFrame()
+            logger.info(f"Archivo nuevo. Descargando últimos 90 días desde: {start_date}")
+        
+        if start_date.date() <= end_date:
             logger.info(f"Descargando datos desde {start_date.date()} hasta {end_date}...")
             weekly_stats_data = intervals.summary_stats(start_date.date(), end_date)
             logger.info("✓ Datos descargados")

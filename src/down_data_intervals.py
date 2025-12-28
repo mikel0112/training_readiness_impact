@@ -6,9 +6,43 @@ import numpy as np
 import os
 from redmail import gmail
 import matplotlib.pyplot as plt
-import os
 from pathlib import Path
 from fpdf import FPDF
+from google.cloud import storage
+from io import StringIO
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Configuración de Cloud Storage
+BUCKET_NAME = "weeklytrainingemail-data"
+storage_client = storage.Client()
+bucket = storage_client.bucket(BUCKET_NAME)
+
+def read_csv_from_gcs(blob_path):
+    """Lee un CSV desde Cloud Storage"""
+    try:
+        blob = bucket.blob(blob_path)
+        if blob.exists():
+            content = blob.download_as_string()
+            return pd.read_csv(StringIO(content.decode('utf-8')))
+        else:
+            logger.info(f"Archivo {blob_path} no existe en GCS")
+            return None
+    except Exception as e:
+        logger.error(f"Error al leer {blob_path} desde GCS: {e}")
+        return None
+
+def save_csv_to_gcs(df, blob_path):
+    """Guarda un DataFrame como CSV en Cloud Storage"""
+    try:
+        blob = bucket.blob(blob_path)
+        csv_string = df.to_csv(index=False)
+        blob.upload_from_string(csv_string, content_type='text/csv')
+        logger.info(f"✓ CSV guardado en GCS: {blob_path}")
+    except Exception as e:
+        logger.error(f"Error al guardar {blob_path} en GCS: {e}")
+        raise
 
 
 class Intervals:
@@ -261,7 +295,6 @@ class Intervals:
         params = {}
         params["start"] = start_date.isoformat()
         params["end"] = end_date.isoformat()
-        #params['tags'] = 'Coaching'
         res = self._make_request("get", url, params=params)
         return res.json()
 
@@ -285,17 +318,15 @@ class SaveData:
             "injury",
         ]
         clean_df = wellness_df[interesting_columns]
-        # change column name from id to date
         clean_df = clean_df.rename(columns={"id": "date"})
-        # sleep values from seconds to hours
         clean_df["sleepSecs"] = clean_df["sleepSecs"] / 3600
-        # merge data from both dfs
         wellness_clean_df = pd.concat([old_df, clean_df], ignore_index=True)
-        os.makedirs(f"data/{self.athlete_name}", exist_ok=True)
-        wellness_clean_df.to_csv(f"data/{self.athlete_name}/wellness.csv")
+        
+        # Guardar en Cloud Storage en lugar de local
+        save_csv_to_gcs(wellness_clean_df, f"data/{self.athlete_name}/wellness.csv")
 
     def activities_data(self, activities_data, old_act_df):
-        df_activities = pd.DataFrame(activities_dict)
+        df_activities = pd.DataFrame(activities_data)
         activities_clean_df = df_activities[[
             'id',
             'start_date_local', 
@@ -311,13 +342,9 @@ class SaveData:
             'icu_rpe', 
             'feel',
             'icu_efficiency_factor',
-
         ]]
-        # change date format to datetime.date
         activities_clean_df['start_date_local'] = pd.to_datetime(activities_clean_df['start_date_local']).dt.date
-        # create session quality column
         activities_clean_df['session_quality'] = activities_clean_df['feel'] * activities_clean_df['icu_efficiency_factor']
-        # change units to average speed
         activities_clean_df.loc[activities_clean_df['type'] == 'Ride', 
                                 'average_speed'] = activities_clean_df['average_speed'] * 3.6
         activities_clean_df.loc[activities_clean_df['type'] == 'Run',
@@ -326,14 +353,13 @@ class SaveData:
                                 'average_speed'] = 1/(activities_clean_df['average_speed'] * 0.06)
         activities_clean_df['moving_time'] = activities_clean_df['moving_time'] / 3600
         activities_clean_df['distance'] = activities_clean_df['distance'] / 1000
-        # merge data from both dfs
         activities_clean_df = pd.concat([old_act_df, activities_clean_df], ignore_index=True)
-        os.makedirs(f"data/{self.athlete_name}", exist_ok=True)
-        activities_clean_df.to_csv(f"data/{self.athlete_name}/activities.csv")
+        
+        # Guardar en Cloud Storage en lugar de local
+        save_csv_to_gcs(activities_clean_df, f"data/{self.athlete_name}/activities.csv")
     
     def weekly_stats_data(self, weekly_stats_data, athlete, old_weekly_stats_df):
         df_weekly_stats = pd.DataFrame(weekly_stats_data)
-        # save the rows that in a certain column contain athlete name
         df_weekly_stats = df_weekly_stats[df_weekly_stats['athlete_name'] == athlete]
         clean_df = df_weekly_stats[[
             'count',
@@ -397,10 +423,8 @@ class SaveData:
         types_df.index = index_list
         clean_df = pd.concat([clean_df, types_df], axis=1)
 
-        # drop unnecessary columns
         clean_df = clean_df.drop(columns=['timeInZones', 'byCategory'])
 
-        # change columns units
         clean_df['time'] = clean_df['time'] / 3600
         clean_df['distance'] = clean_df['distance'] / 1000
         clean_df['run_time'] = clean_df['run_time'] / 3600
@@ -410,69 +434,7 @@ class SaveData:
         clean_df['strength_time'] = clean_df['strength_time'] / 3600
         clean_df['strength_distance'] = clean_df['strength_distance'] / 1000
 
-
-        # merge data from both dfs
         df_weekly_stats = pd.concat([old_weekly_stats_df, clean_df], ignore_index=True)
-        os.makedirs(f"data/{athlete}", exist_ok=True)
-        df_weekly_stats.to_csv(f"data/{athlete}/weekly_stats.csv")
-
-if __name__ == "__main__":
-
-    # get credentials
-    credentials_info = json.load(open("docs/p_info.json"))
-    for user, data in credentials_info.items():
-        if data['role'] == "coach":
-            coach_name = user
-    coach_id = credentials_info[coach_name]["id"]
-    api_key = credentials_info[coach_name]["password"]
-
-    intervals = Intervals(coach_id, api_key)
-    save_data = SaveData(coach_name)
-
-    ########-------------------------------------########
-    ########      DOWNLOAD WELLNESS DATA         ########
-    ########-------------------------------------########
-
-    # find dates
-    if os.path.exists(f"data/{coach_name}/wellness.csv"):
-        old_wellness_df = pd.read_csv(f"data/{coach_name}/wellness.csv")
-        start_date = old_wellness_df['date'].max()
-        start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
-        # add one day to start date
-        start_date = start_date + datetime.timedelta(days=1)
-    else:
-        start_date = datetime.datetime.strptime(input("Start date (YYYY-MM-DD): "), "%Y-%m-%d")
-        old_wellness_df = pd.DataFrame()
-    end_date = datetime.date.today()
-
-    # download
-    if start_date.date() < end_date:
-        wellness_df = intervals.wellness(start_date.date(), end_date)
-
-        # save data
-        save_data.wellness_data(wellness_df, old_wellness_df)
-
-    #---------------------------------------------------#
-    #---------------------------------------------------#
-
-
-    ########-------------------------------------########
-    ########      DOWNLOAD ACTIVITIES DATA       ########
-    ########-------------------------------------########
-    # download activities csv
-    if os.path.exists(f"data/{coach_name}/activities.csv"):
-        old_act_df = pd.read_csv(f"data/{coach_name}/activities.csv")
-        start_date = old_act_df['date'].max()+ datetime.timedelta(days=1)
-    else:
-        start_date = datetime.datetime.strptime(input("Start date (YYYY-MM-DD): "), "%Y-%m-%d")
-        old_act_df = pd.DataFrame()
-
-    if start_date.date() < end_date:
-        activities_dict = intervals.activities(start_date.date(), end_date)
-    
-        # save data
-        save_data.activities_data(activities_dict, old_act_df)
-
-    #---------------------------------------------------#
-    #---------------------------------------------------#
-    
+        
+        # Guardar en Cloud Storage en lugar de local
+        save_csv_to_gcs(df_weekly_stats, f"data/{athlete}/weekly_stats.csv")
