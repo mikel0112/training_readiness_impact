@@ -211,6 +211,7 @@ def home():
     # hasta que la función termine de enviar todo.
     try:
         ejecutar_proceso_completo()
+        #sleep 10 segundos
         time.sleep(10)
         return "Emails enviados correctamente.", 200
     except Exception as e:
