@@ -236,8 +236,7 @@ def ejecutar_proceso_completo():
         ########      DOWNLOAD WEEKLY STATS DATA     ########
         ########-------------------------------------########
         logger.info("Descargando estadísticas semanales...")
-        today_date = datetime.date.today()
-        end_date = today_date - datetime.timedelta(days=today_date.weekday()) - datetime.timedelta(days=1)
+        end_date = datetime.date.today()
         logger.info(f"Fecha fin: {end_date}")
         
         # Leer datos existentes desde GCS
