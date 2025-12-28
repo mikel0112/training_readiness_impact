@@ -188,7 +188,8 @@ class WriteEmail():
 
             for key,values in info.items():
                 if values['icu_name'] == athlete_name:
-                    correo = values['email']
+                    #correo = values['email']
+                    correo = 'mikelcampo0112@gmail.com'
                     logger.info(f"Email destino encontrado: {correo}")
             
             logger.info(f"Enviando email a {correo}...")
