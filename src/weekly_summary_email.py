@@ -250,10 +250,10 @@ def ejecutar_proceso_completo():
                 logger.info(f"Archivo existente encontrado en GCS. Fecha inicio: {start_date}")
             except Exception as e:
                 logger.warning(f"Error al procesar fecha: {e}. Descargando últimos 90 días...")
-                start_date = end_date - datetime.timedelta(days=90)
+                start_date = end_date - datetime.timedelta(days=30)
                 old_weekly_stats_df = pd.DataFrame()
         else:
-            start_date = end_date - datetime.timedelta(days=90)
+            start_date = end_date - datetime.timedelta(days=30)
             old_weekly_stats_df = pd.DataFrame()
             logger.info(f"Archivo nuevo. Descargando últimos 90 días desde: {start_date}")
         
