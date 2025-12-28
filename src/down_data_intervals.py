@@ -403,6 +403,10 @@ class SaveData:
         for i in range(rows):
             for j in range(cols):
                 type_dict = expanded_columns.iloc[i, j]
+                if type_dict:
+                    logger.info(f"Category: {type_dict['category']}")
+                else:
+                    logger.info(f"Category: None")
                 if type_dict['category'] == 'Run':
                     types_df.loc[i, 'run_time'] = type_dict['time']
                     types_df.loc[i, 'run_count'] = type_dict['count']
