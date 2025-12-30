@@ -220,13 +220,13 @@ def ejecutar_proceso_completo():
         logger.info("INICIANDO ENVÍO DE EMAILS")
         logger.info("="*60)
         
-        date = datetime.datetime.today() - datetime.timedelta(days=6)
+        date = datetime.datetime.today() - datetime.timedelta(days=2)
         date_string = date.strftime("%Y-%m-%d")
         logger.info(f"Fecha de reporte: {date_string}")
         
         email_count = 0
         for key, values in credentials_info.items():
-            if values['role']:
+            if 'role' in values:
                 if values['role']=='coach':
                     coach_name = key
                 if 'icu_name' in values:
