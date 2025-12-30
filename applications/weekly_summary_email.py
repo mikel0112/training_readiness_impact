@@ -108,7 +108,9 @@ class WriteEmail():
         other_hours = self.data['strength_time'].values[0]
         sizes = [run_hours, ride_hours, other_hours]
         # if value nan convert to 0 use numpy
+        sizes = np.array(sizes, dtype=float)
         sizes = np.nan_to_num(sizes)
+        logger.info(F"sizes: {sizes}")
         explode = (0, 0, 0.1)
         fig1, ax1 = plt.subplots()
         ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%',
@@ -120,21 +122,6 @@ class WriteEmail():
         plt.close()
     
     def zones_cumulative_bar_chart(self):
-        # check data Z not none
-        if self.data['Z_1'].isna().values[0]:
-            self.data['Z_1'] = 0
-        if self.data['Z_2'].isna().values[0]:
-            self.data['Z_2'] = 0
-        if self.data['Z_3'].isna().values[0]:
-            self.data['Z_3'] = 0
-        if self.data['Z_4'].isna().values[0]:
-            self.data['Z_4'] = 0
-        if self.data['Z_5'].isna().values[0]:
-            self.data['Z_5'] = 0
-        if self.data['Z_6'].isna().values[0]:
-            self.data['Z_6'] = 0
-        if self.data['Z_7'].isna().values[0]:
-            self.data['Z_7'] = 0
 
         z1_per = self.data['Z_1'].values[0]
         z2_per = self.data['Z_2'].values[0]
@@ -144,7 +131,6 @@ class WriteEmail():
         z6_per = self.data['Z_6'].values[0]
         z7_per = self.data['Z_7'].values[0]
 
-        logger.info(f"Tiempo en cada zona {z1_per}, {z2_per}, {z3_per}, {z4_per}, {z5_per}, {z6_per}, {z7_per}")
 
         # graph in bars each in a personalizeed color
         plt.figure(figsize=(10, 5))
