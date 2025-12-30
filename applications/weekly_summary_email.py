@@ -1,8 +1,6 @@
 from fpdf import FPDF
 from redmail import gmail
-from utils.intervals import Intervals
-from utils.cleandata import CleanData
-from utils.googlecloud import GCcredential, GCStorage
+from utils.googlecloud import GCcredential, GCMySQL
 from flask import Flask
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -68,18 +66,13 @@ def generar_pdf_deportista(nombre_archivo, athlete_name):
         pdf.output(nombre_archivo)
 
 class WriteEmail():
-    def __init__(self, athlete_name, date, gc_storage):
+    def __init__(self, athlete_name, date, data):
         self.athlete_name = athlete_name
         self.date = date
-        self.gc_stotorage = gc_storage
-        # Leer CSV desde GCS
-        csv_path = f"data/{self.athlete_name}/weekly_stats.csv"
-        self.data = self.gc_stotorage.read_csv_from_gcs(csv_path)
-        if self.data is None:
-            raise FileNotFoundError(f"No se encontró {csv_path} en Cloud Storage")
+        self.data = self.data
     
     def form_chart(self):
-        form = self.data['form'].loc[self.data["date"] == self.date].values[0]
+        form = self.data['form'].values[0]
         # fill the back space with different colors based on y values horizontally
         fig = plt.figure(figsize=(10, 5))
         ax = fig.add_subplot(1, 1, 1)
@@ -110,9 +103,9 @@ class WriteEmail():
     
     def hours_pie_chart(self):
         labels = 'Run', 'Ride', 'Other'
-        run_hours = self.data['run_time'].loc[self.data["date"] == self.date].values[0]
-        ride_hours = self.data['ride_time'].loc[self.data["date"] == self.date].values[0]
-        other_hours = self.data['strength_time'].loc[self.data["date"] == self.date].values[0]
+        run_hours = self.data['run_time'].values[0]
+        ride_hours = self.data['ride_time'].values[0]
+        other_hours = self.data['strength_time'].values[0]
         sizes = [run_hours, ride_hours, other_hours]
         # if value nan convert to 0 use numpy
         sizes = np.nan_to_num(sizes)
@@ -127,13 +120,13 @@ class WriteEmail():
         plt.close()
     
     def zones_cumulative_bar_chart(self):
-        z1_per = self.data['Z_1'].loc[self.data["date"] == self.date].values[0]
-        z2_per = self.data['Z_2'].loc[self.data["date"] == self.date].values[0]
-        z3_per = self.data['Z_3'].loc[self.data["date"] == self.date].values[0]
-        z4_per = self.data['Z_4'].loc[self.data["date"] == self.date].values[0]
-        z5_per = self.data['Z_5'].loc[self.data["date"] == self.date].values[0]
-        z6_per = self.data['Z_6'].loc[self.data["date"] == self.date].values[0]
-        z7_per = self.data['Z_7'].loc[self.data["date"] == self.date].values[0]
+        z1_per = self.data['Z_1'].values[0]
+        z2_per = self.data['Z_2'].values[0]
+        z3_per = self.data['Z_3'].values[0]
+        z4_per = self.data['Z_4'].values[0]
+        z5_per = self.data['Z_5'].values[0]
+        z6_per = self.data['Z_6'].values[0]
+        z7_per = self.data['Z_7'].values[0]
 
         # graph in bars each in a personalizeed color
         plt.figure(figsize=(10, 5))
@@ -225,56 +218,9 @@ def ejecutar_proceso_completo():
         coach_id = credentials_info[coach_name]["id"]
         api_key = credentials_info[coach_name]["password"]
 
-        intervals = Intervals(coach_id, api_key)
-        clean_data = CleanData(coach_name)
-        logger.info("✓ Objetos Intervals y SaveData creados")
-
-        ########-------------------------------------########
-        ########      DOWNLOAD WEEKLY STATS DATA     ########
-        ########-------------------------------------########
-        logger.info("Descargando estadísticas semanales...")
-        end_date = datetime.date.today()
-        logger.info(f"Fecha fin: {end_date}")
-        
-        # Leer datos existentes desde GCS
-        BUCKET_NAME = "weeklytrainingemail-data"
-        gc_storage = GCStorage(BUCKET_NAME)
-        weekly_stats_path = f"data/{coach_name}/weekly_stats.csv"
-        old_weekly_stats_df = gc_storage.read_csv_from_gcs(weekly_stats_path)
-        
-        if old_weekly_stats_df is not None and not old_weekly_stats_df.empty:
-            try:
-                start_date = datetime.datetime.strptime(old_weekly_stats_df['date'].max()) + datetime.timedelta(days=1)
-                logger.info(f"Archivo existente encontrado en GCS. Fecha inicio: {start_date}")
-            except Exception as e:
-                logger.warning(f"Error al procesar fecha: {e}. Descargando últimos 90 días...")
-                start_date = end_date - datetime.timedelta(days=30)
-                old_weekly_stats_df = pd.DataFrame()
-        else:
-            start_date = end_date - datetime.timedelta(days=30)
-            old_weekly_stats_df = pd.DataFrame()
-            logger.info(f"Archivo nuevo. Descargando últimos 90 días desde: {start_date}")
-        
-        if start_date <= end_date:
-            logger.info(f"Descargando datos desde {start_date} hasta {end_date}...")
-            weekly_stats_data = intervals.summary_stats(start_date, end_date)
-            logger.info("✓ Datos descargados")
-            
-            # list of athletes
-            athletes = []
-            for athlete, data in credentials_info.items():
-                if 'icu_name' in data:
-                    athletes.append(data['icu_name'])
-            logger.info(f"Atletas encontrados: {athletes}")
-            
-            # save data for every athlete
-            for athlete in athletes:
-                logger.info(f"Guardando datos para {athlete}...")
-                df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athlete, old_weekly_stats_df)
-                gc_storage.save_csv_to_gcs(df_weekly_stats, weekly_stats_path)
-                logger.info(f"✓ Datos guardados para {athlete}")
-        else:
-            logger.info("No hay nuevos datos para descargar")
+        gc_mysql = GCMySQL(credentials_info)
+        connector = gc_mysql.get_db_connection()
+        pool = gc_mysql.sqlalchemy_engine()        
 
         #---------------------------------------------------#
         #---------------------------------------------------#
@@ -292,8 +238,12 @@ def ejecutar_proceso_completo():
                 coach_name = key
             if 'icu_name' in values:
                 athlete_name = values['icu_name']
+                name_unified = athlete_name.replace(" ", "_")
                 logger.info(f"\n--- Procesando atleta #{email_count+1}: {athlete_name} ---")
-                email_com = WriteEmail(athlete_name, date_string, gc_storage)
+                # query data from athlete
+                query = f"SELECT * FROM weekly_stats.weekly_stats_{name_unified} WHERE date = '{date_string}'"
+                df = pd.read_sql_query(query, pool)
+                email_com = WriteEmail(athlete_name, date_string, df)
                 email_com.send_email(credentials_info, athlete_name, date_string, coach_name)
                 email_count += 1
                 logger.info(f"--- Finalizado atleta {athlete_name} ---\n")
