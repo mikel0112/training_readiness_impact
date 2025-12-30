@@ -69,7 +69,7 @@ class WriteEmail():
     def __init__(self, athlete_name, date, data):
         self.athlete_name = athlete_name
         self.date = date
-        self.data = self.data
+        self.data = data
     
     def form_chart(self):
         form = self.data['form'].values[0]
