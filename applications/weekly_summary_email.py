@@ -236,10 +236,16 @@ def ejecutar_proceso_completo():
                     # query data from athlete
                     query = f"SELECT * FROM weekly_stats.weekly_stats_{name_unified} WHERE date = '{date_string}'"
                     df = pd.read_sql_query(query, pool)
-                    email_com = WriteEmail(athlete_name, date_string, df)
-                    email_com.send_email(credentials_info, athlete_name, date_string, coach_name)
-                    email_count += 1
-                    logger.info(f"--- Finalizado atleta {athlete_name} ---\n")
+                    # if no data, skip
+                    if df.empty:
+                        logger.info(f"--- Atleta {athlete_name} sin datos ---")
+                        continue
+                    else:
+                        logger.info(f"--- Atleta {athlete_name} con datos ---")
+                        email_com = WriteEmail(athlete_name, date_string, df)
+                        email_com.send_email(credentials_info, athlete_name, date_string, coach_name)
+                        email_count += 1
+                        logger.info(f"--- Finalizado atleta {athlete_name} ---\n")
 
         logger.info("="*60)
         logger.info(f"✓✓✓ PROCESO FINALIZADO CON ÉXITO - {email_count} emails enviados ✓✓✓")
