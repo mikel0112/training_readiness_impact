@@ -211,9 +211,10 @@ def ejecutar_proceso_completo():
         logger.info("✓ Credenciales cargadas exitosamente")
         
         for user, data in credentials_info.items():
-            if data['role'] == "coach":
-                coach_name = user
-                logger.info(f"Coach identificado: {coach_name}")
+            if data['role']:
+                if data['role'] == "coach":
+                    coach_name = user
+                    logger.info(f"Coach identificado: {coach_name}")
         
         coach_id = credentials_info[coach_name]["id"]
         api_key = credentials_info[coach_name]["password"]
