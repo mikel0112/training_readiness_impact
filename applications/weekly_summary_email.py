@@ -1,18 +1,17 @@
-import os
 from fpdf import FPDF
 from redmail import gmail
+from utils.intervals import Intervals
+from utils.cleandata import CleanData
+from utils.googlecloud import GCcredential, GCStorage
+from flask import Flask
 import matplotlib.pyplot as plt
-import json
 import pandas as pd
 import datetime
 import numpy as np
 import sys
 import logging
-from google.cloud import secretmanager
-from down_data_intervals import Intervals, SaveData, read_csv_from_gcs, save_csv_to_gcs
-from flask import Flask
-import threading
 import time
+import os
 
 
 # Configurar logging
@@ -21,21 +20,6 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-def get_credentials_from_secret():
-    """Lee las credenciales desde Google Secret Manager"""
-    try:
-        client = secretmanager.SecretManagerServiceClient()
-        project_id = "weeklytrainingemail"
-        secret_id = "p-info-json"
-        name = f"projects/{project_id}/secrets/{secret_id}/versions/latest"
-        
-        response = client.access_secret_version(request={"name": name})
-        secret_data = response.payload.data.decode("UTF-8")
-        return json.loads(secret_data)
-    except Exception as e:
-        logger.error(f"Error al leer credenciales desde Secret Manager: {e}")
-        raise
 
 # Esto le dice a Python que busque archivos en la carpeta actual del script
 dir_actual = os.path.dirname(os.path.abspath(__file__))
@@ -84,12 +68,13 @@ def generar_pdf_deportista(nombre_archivo, athlete_name):
         pdf.output(nombre_archivo)
 
 class WriteEmail():
-    def __init__(self, athlete_name, date):
+    def __init__(self, athlete_name, date, gc_storage):
         self.athlete_name = athlete_name
         self.date = date
+        self.gc_stotorage = gc_storage
         # Leer CSV desde GCS
         csv_path = f"data/{self.athlete_name}/weekly_stats.csv"
-        self.data = read_csv_from_gcs(csv_path)
+        self.data = self.gc_stotorage.read_csv_from_gcs(csv_path)
         if self.data is None:
             raise FileNotFoundError(f"No se encontró {csv_path} en Cloud Storage")
     
@@ -118,6 +103,8 @@ class WriteEmail():
         ax.spines['left'].set_visible(False)
         ax.spines['bottom'].set_visible(False)
         os.makedirs(f"outputs/{self.athlete_name}/email",exist_ok=True)
+        if os.path.exists(f"outputs/{self.athlete_name}/email/form.png"):
+            os.remove(f"outputs/{self.athlete_name}/email/form.png")
         plt.savefig(f"outputs/{self.athlete_name}/email/form.png", bbox_inches='tight')
         plt.close()
     
@@ -134,6 +121,8 @@ class WriteEmail():
         ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%',
                 shadow=True, startangle=90)
         ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        if os.path.exists(f"outputs/{self.athlete_name}/email/hours.png"):
+            os.remove(f"outputs/{self.athlete_name}/email/hours.png")
         plt.savefig(f"outputs/{self.athlete_name}/email/hours.png", bbox_inches='tight')
         plt.close()
     
@@ -151,6 +140,8 @@ class WriteEmail():
         plt.bar(['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5', 'Zone 6', 'Zone 7'], 
                 [z1_per, z2_per, z3_per, z4_per, z5_per, z6_per, z7_per], 
                 color=['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink'])
+        if os.path.exists(f"outputs/{self.athlete_name}/email/zones.png"):
+            os.remove(f"outputs/{self.athlete_name}/email/zones.png")
         plt.savefig(f"outputs/{self.athlete_name}/email/zones.png", bbox_inches='tight')
         plt.close()
 
@@ -174,6 +165,9 @@ class WriteEmail():
             athlete_name_unified = athlete_name.replace(" ", "_")
             pdf_output = f"outputs/{athlete_name}/email/{date}.pdf"
             logger.info(f"Generando PDF: {pdf_output}")
+            last_pdf_date = date - datetime.timedelta(days=7)
+            if os.path.exists(f"outputs/{athlete_name}/email/{last_pdf_date}.pdf"):
+                os.remove(f"outputs/{athlete_name}/email/{last_pdf_date}.pdf")
             generar_pdf_deportista(pdf_output, athlete_name)
             logger.info(f"✓ PDF generado correctamente")
 
@@ -217,7 +211,10 @@ def ejecutar_proceso_completo():
         
         # get credentials from Secret Manager
         logger.info("Cargando credenciales desde Secret Manager...")
-        credentials_info = get_credentials_from_secret()
+        project_id = "weeklytrainingemail"
+        secret_id = "p-info-json"
+        gc_credential = GCcredential(project_id, secret_id)
+        credentials_info = gc_credential.get_credentials_from_secret()
         logger.info("✓ Credenciales cargadas exitosamente")
         
         for user, data in credentials_info.items():
@@ -229,7 +226,7 @@ def ejecutar_proceso_completo():
         api_key = credentials_info[coach_name]["password"]
 
         intervals = Intervals(coach_id, api_key)
-        save_data = SaveData(coach_name)
+        clean_data = CleanData(coach_name)
         logger.info("✓ Objetos Intervals y SaveData creados")
 
         ########-------------------------------------########
@@ -240,8 +237,10 @@ def ejecutar_proceso_completo():
         logger.info(f"Fecha fin: {end_date}")
         
         # Leer datos existentes desde GCS
+        BUCKET_NAME = "weeklytrainingemail-data"
+        gc_storage = GCStorage(BUCKET_NAME)
         weekly_stats_path = f"data/{coach_name}/weekly_stats.csv"
-        old_weekly_stats_df = read_csv_from_gcs(weekly_stats_path)
+        old_weekly_stats_df = gc_storage.read_csv_from_gcs(weekly_stats_path)
         
         if old_weekly_stats_df is not None and not old_weekly_stats_df.empty:
             try:
@@ -271,7 +270,8 @@ def ejecutar_proceso_completo():
             # save data for every athlete
             for athlete in athletes:
                 logger.info(f"Guardando datos para {athlete}...")
-                save_data.weekly_stats_data(weekly_stats_data, athlete, old_weekly_stats_df)
+                df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athlete, old_weekly_stats_df)
+                gc_storage.save_csv_to_gcs(df_weekly_stats, weekly_stats_path)
                 logger.info(f"✓ Datos guardados para {athlete}")
         else:
             logger.info("No hay nuevos datos para descargar")
@@ -293,7 +293,7 @@ def ejecutar_proceso_completo():
             if 'icu_name' in values:
                 athlete_name = values['icu_name']
                 logger.info(f"\n--- Procesando atleta #{email_count+1}: {athlete_name} ---")
-                email_com = WriteEmail(athlete_name, date_string)
+                email_com = WriteEmail(athlete_name, date_string, gc_storage)
                 email_com.send_email(credentials_info, athlete_name, date_string, coach_name)
                 email_count += 1
                 logger.info(f"--- Finalizado atleta {athlete_name} ---\n")

@@ -7,4 +7,4 @@ RUN chmod -R 777 /app/outputs /app/data
 COPY . .
 # Esto añade la carpeta actual al PATH de Python
 ENV PYTHONPATH="${PYTHONPATH}:/app"
-CMD ["python", "src/weekly_summary_email.py"]
+CMD ["python", "applications/weekly_summary_email.py"]

@@ -13,5 +13,6 @@ albumentations
 redmail
 mysql-connector-python
 fpdf2
-mysql-connector-python
 flask
+cloud-sql-python-connector[pymysql]
+SQLAlchemy
