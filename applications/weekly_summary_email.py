@@ -182,10 +182,11 @@ class WriteEmail():
             logger.info(f"Configurando Gmail con usuario: {gmail.user_name}")
 
             for key,values in info.items():
-                if values['icu_name'] == athlete_name:
-                    #correo = values['email']
-                    correo = 'mikelcampo0112@gmail.com'
-                    logger.info(f"Email destino encontrado: {correo}")
+                if 'icu_name' in values.keys():
+                    if values['icu_name'] == athlete_name:
+                        #correo = values['email']
+                        correo = 'mikelcampo0112@gmail.com'
+                        logger.info(f"Email destino encontrado: {correo}")
             
             logger.info(f"Enviando email a {correo}...")
             gmail.send(
@@ -237,7 +238,7 @@ def ejecutar_proceso_completo():
             if 'role' in values:
                 if values['role']=='coach':
                     coach_name = key
-                if 'icu_name' in values:
+                if 'icu_name' in values.keys():
                     athlete_name = values['icu_name']
                     name_unified = athlete_name.replace(" ", "_")
                     logger.info(f"\n--- Procesando atleta #{email_count+1}: {athlete_name} ---")
