@@ -6,4 +6,5 @@ __pycache__/
 *.md
 .DS_Store
 data/
+docs/
 EOF
