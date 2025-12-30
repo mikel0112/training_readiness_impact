@@ -6,5 +6,6 @@ numpy
 requests
 Flask
 google-cloud-secret-manager
+google-cloud-storage
 cloud-sql-python-connector[pymysql]
 SQLAlchemy
