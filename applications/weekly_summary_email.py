@@ -162,7 +162,11 @@ class WriteEmail():
             athlete_name_unified = athlete_name.replace(" ", "_")
             pdf_output = f"outputs/{athlete_name}/email/{date}.pdf"
             logger.info(f"Generando PDF: {pdf_output}")
+            # convert str to datetime date
+            date = datetime.date.fromisoformat(date)
             last_pdf_date = date - datetime.timedelta(days=7)
+            # convert date to str
+            last_pdf_date = last_pdf_date.strftime("%Y-%m-%d")
             if os.path.exists(f"outputs/{athlete_name}/email/{last_pdf_date}.pdf"):
                 os.remove(f"outputs/{athlete_name}/email/{last_pdf_date}.pdf")
             generar_pdf_deportista(pdf_output, athlete_name)
