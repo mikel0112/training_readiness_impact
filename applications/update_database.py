@@ -50,6 +50,8 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name):
                 clean_data = CleanData(coach_name)
                 for athlete in athletes:
                     logger.info(f"Guardando datos para {athlete}...")
+                    query = f"SELECT * FROM weekly_stats.weekly_stats_{athletes_unified[athletes.index(athlete)]}"
+                    old_weekly_stats_df = pd.read_sql_query(query, pool)
                     df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athlete, old_weekly_stats_df)
                     df_columns = df_weekly_stats.columns.tolist()
                     # create table
