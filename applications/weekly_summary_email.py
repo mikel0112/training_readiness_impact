@@ -120,6 +120,22 @@ class WriteEmail():
         plt.close()
     
     def zones_cumulative_bar_chart(self):
+        # check data Z not none
+        if self.data['Z_1'].isna().values[0]:
+            self.data['Z_1'] = 0
+        if self.data['Z_2'].isna().values[0]:
+            self.data['Z_2'] = 0
+        if self.data['Z_3'].isna().values[0]:
+            self.data['Z_3'] = 0
+        if self.data['Z_4'].isna().values[0]:
+            self.data['Z_4'] = 0
+        if self.data['Z_5'].isna().values[0]:
+            self.data['Z_5'] = 0
+        if self.data['Z_6'].isna().values[0]:
+            self.data['Z_6'] = 0
+        if self.data['Z_7'].isna().values[0]:
+            self.data['Z_7'] = 0
+
         z1_per = self.data['Z_1'].values[0]
         z2_per = self.data['Z_2'].values[0]
         z3_per = self.data['Z_3'].values[0]
