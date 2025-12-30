@@ -144,6 +144,8 @@ class WriteEmail():
         z6_per = self.data['Z_6'].values[0]
         z7_per = self.data['Z_7'].values[0]
 
+        logger.info(f"Tiempo en cada zona {z1_per}, {z2_per}, {z3_per}, {z4_per}, {z5_per}, {z6_per}, {z7_per}")
+
         # graph in bars each in a personalizeed color
         plt.figure(figsize=(10, 5))
         plt.bar(['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5', 'Zone 6', 'Zone 7'], 
