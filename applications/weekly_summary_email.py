@@ -209,15 +209,6 @@ def ejecutar_proceso_completo():
         gc_credential = GCcredential(project_id, secret_id)
         credentials_info = gc_credential.get_credentials_from_secret()
         logger.info("✓ Credenciales cargadas exitosamente")
-        
-        for user, data in credentials_info.items():
-            if data['role']:
-                if data['role'] == "coach":
-                    coach_name = user
-                    logger.info(f"Coach identificado: {coach_name}")
-        
-        coach_id = credentials_info[coach_name]["id"]
-        api_key = credentials_info[coach_name]["password"]
 
         gc_mysql = GCMySQL(credentials_info)
         connector = gc_mysql.get_db_connection()
@@ -235,19 +226,20 @@ def ejecutar_proceso_completo():
         
         email_count = 0
         for key, values in credentials_info.items():
-            if values['role']=='coach':
-                coach_name = key
-            if 'icu_name' in values:
-                athlete_name = values['icu_name']
-                name_unified = athlete_name.replace(" ", "_")
-                logger.info(f"\n--- Procesando atleta #{email_count+1}: {athlete_name} ---")
-                # query data from athlete
-                query = f"SELECT * FROM weekly_stats.weekly_stats_{name_unified} WHERE date = '{date_string}'"
-                df = pd.read_sql_query(query, pool)
-                email_com = WriteEmail(athlete_name, date_string, df)
-                email_com.send_email(credentials_info, athlete_name, date_string, coach_name)
-                email_count += 1
-                logger.info(f"--- Finalizado atleta {athlete_name} ---\n")
+            if values['role']:
+                if values['role']=='coach':
+                    coach_name = key
+                if 'icu_name' in values:
+                    athlete_name = values['icu_name']
+                    name_unified = athlete_name.replace(" ", "_")
+                    logger.info(f"\n--- Procesando atleta #{email_count+1}: {athlete_name} ---")
+                    # query data from athlete
+                    query = f"SELECT * FROM weekly_stats.weekly_stats_{name_unified} WHERE date = '{date_string}'"
+                    df = pd.read_sql_query(query, pool)
+                    email_com = WriteEmail(athlete_name, date_string, df)
+                    email_com.send_email(credentials_info, athlete_name, date_string, coach_name)
+                    email_count += 1
+                    logger.info(f"--- Finalizado atleta {athlete_name} ---\n")
 
         logger.info("="*60)
         logger.info(f"✓✓✓ PROCESO FINALIZADO CON ÉXITO - {email_count} emails enviados ✓✓✓")
