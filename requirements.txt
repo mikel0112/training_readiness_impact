@@ -14,5 +14,7 @@ redmail
 mysql-connector-python
 fpdf2
 flask
+google-cloud-secret-manager
+google-cloud-storage
 cloud-sql-python-connector[pymysql]
 SQLAlchemy

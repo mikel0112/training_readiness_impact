@@ -30,14 +30,14 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name):
         if 'icu_name' in data:
             name_unified = data['icu_name'].replace(" ", "_")
             athletes_unified.append(name_unified)
-            athletes.append(athlete)
+            athletes.append(data['icu_name'])
     logger.info(f"Atletas encontrados: {athletes}")
     download_data = Intervals(coach_id, api_key)
-    try:
-        for athlete in athletes_unified:
-            # extract latest date in any of the tables
-            logger.info(f"Buscando datos para {athlete} en la base de datos...")
-            query = f"SELECT date FROM weekly_stats.weekly_stats_{athlete} ORDER BY date DESC LIMIT 1"
+    for athlete in athletes_unified:
+        # extract latest date in any of the tables
+        logger.info(f"Buscando datos para {athlete} en la base de datos...")
+        query = f"SELECT date FROM weekly_stats.weekly_stats_{athlete} ORDER BY date DESC LIMIT 1"
+        try:
             result = pd.read_sql_query(query, pool)
             start_date = datetime.date.fromisoformat(result['date'].values[0])
             end_date = datetime.date.today()
@@ -46,50 +46,47 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name):
                 weekly_stats_data = download_data.summary_stats(start_date, end_date)
                 logger.info("✓ Datos descargados")
                 
-                # save data for every athlete
-                clean_data = CleanData(coach_name)
-                for athlete in athletes:
-                    logger.info(f"Guardando datos para {athlete}...")
-                    query = f"SELECT * FROM weekly_stats.weekly_stats_{athletes_unified[athletes.index(athlete)]}"
-                    old_weekly_stats_df = pd.read_sql_query(query, pool)
-                    df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athlete, old_weekly_stats_df)
-                    df_columns = df_weekly_stats.columns.tolist()
-                    # create table
-                    df_weekly_stats.to_sql(f'weekly_stats_{athletes_unified[athletes.index(athlete)]}', pool, if_exists='append', index=False)
+                logger.info(f"Guardando datos para {athlete}...")
+                clean_data = CleanData(athletes[athletes_unified.index(athlete)])
+                df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athlete, result)
+                # create table
+                df_weekly_stats.to_sql(f'weekly_stats_{athlete}', pool, if_exists='append', index=False)
             else:
                 logger.info("No hay nuevos datos para descargar")
             logger.info(f"✓ Datos existentes en la base de datos para {athlete}")
 
-    except Exception as e:
-        logger.info("No existen datos en la base de datos")
-        logger.info(f"Error al consultar la base de datos: {e}")
-        logger.info("Descargando estadísticas semanales...")
-        ########-------------------------------------########
-        ########      DOWNLOAD WEEKLY STATS DATA     ########
-        ########-------------------------------------########
-        logger.info("Descargando estadísticas semanales...")
-        end_date = datetime.date.today()
-        logger.info(f"Fecha fin: {end_date}")
-        
-        start_date = end_date - datetime.timedelta(days=30)
-        old_weekly_stats_df = pd.DataFrame()
-        logger.info(f"Archivo nuevo. Descargando últimos 30 días desde: {start_date}")
-        
-        if start_date <= end_date:
-            logger.info(f"Descargando datos desde {start_date} hasta {end_date}...")
-            weekly_stats_data = download_data.summary_stats(start_date, end_date)
-            logger.info("✓ Datos descargados")
+        except Exception as e:
+            logger.info("No existen datos en la base de datos")
+            logger.info(f"Error al descargar datos: {e}")
+            logger.info("Descargando estadísticas semanales...")
+            ########-------------------------------------########
+            ########      DOWNLOAD WEEKLY STATS DATA     ########
+            ########-------------------------------------########
+            logger.info("Descargando estadísticas semanales...")
+            end_date = datetime.date.today()
+            logger.info(f"Fecha fin: {end_date}")
             
-            # save data for every athlete
-            clean_data = CleanData(coach_name)
-            for athlete in athletes:
-                logger.info(f"Guardando datos para {athlete}...")
-                df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athlete, old_weekly_stats_df)
-                df_columns = df_weekly_stats.columns.tolist()
-                # create table
-                df_weekly_stats.to_sql(f'weekly_stats_{athletes_unified[athletes.index(athlete)]}', pool, if_exists='append', index=False)
-        else:
-            logger.info("No hay nuevos datos para descargar")
+            start_date = end_date - datetime.timedelta(days=30)
+            old_weekly_stats_df = pd.DataFrame()
+            logger.info(f"Archivo nuevo. Descargando últimos 30 días desde: {start_date}")
+            
+            if start_date <= end_date:
+                logger.info(f"Descargando datos desde {start_date} hasta {end_date}...")
+                weekly_stats_data = download_data.summary_stats(start_date, end_date)
+                logger.info("✓ Datos descargados")
+                
+                # save data for every athlete
+                clean_data = CleanData(coach_name)
+                for athl in athletes:
+                    logger.info(f"Guardando datos para {athl}...")
+                    df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athl, old_weekly_stats_df)
+                    df_columns = df_weekly_stats.columns.tolist()
+                    # create table
+                    df_weekly_stats.to_sql(f'weekly_stats_{athletes_unified[athletes.index(athl)]}', pool, if_exists='append', index=False)
+                break
+            else:
+                logger.info("No hay nuevos datos para descargar")
+                break
 
 
 if __name__ == "__main__":

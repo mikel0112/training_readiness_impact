@@ -229,7 +229,7 @@ def ejecutar_proceso_completo():
         logger.info("INICIANDO ENVÍO DE EMAILS")
         logger.info("="*60)
         
-        date = datetime.datetime.today() - datetime.timedelta(days=1) #######OJOOOOOOOOOOOOOOO########
+        date = datetime.datetime.today() - datetime.timedelta(days=2) #######OJOOOOOOOOOOOOOOO########
         date_string = date.strftime("%Y-%m-%d")
         logger.info(f"Fecha de reporte: {date_string}")
         
@@ -246,7 +246,7 @@ def ejecutar_proceso_completo():
                     query = f"SELECT * FROM weekly_stats.weekly_stats_{name_unified} WHERE date = '{date_string}'"
                     df = pd.read_sql_query(query, pool)
                     # if no data, skip
-                    if df.empty:
+                    if df['time'].values[0] == 0.0:
                         logger.info(f"--- Atleta {athlete_name} sin datos ---")
                         continue
                     else:
