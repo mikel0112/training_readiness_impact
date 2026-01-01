@@ -133,6 +133,5 @@ class CleanData:
         clean_df['strength_distance'] = clean_df['strength_distance'] / 1000
 
         df_weekly_stats = pd.concat([old_weekly_stats_df, clean_df], ignore_index=True)
-        df_final_weekly_stats = df_weekly_stats.groupby('date', as_index=False).sum()
         
-        return df_final_weekly_stats
+        return df_weekly_stats

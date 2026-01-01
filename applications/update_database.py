@@ -49,7 +49,7 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
             result = pd.read_sql_query(query, pool)
             end_date = datetime.date.today()
             weekday = end_date.weekday()
-            # if not sunday, subtract 6 days
+            # download weekly data just on sundays
             if weekday == 6:
                 start_date = end_date - datetime.timedelta(days=6)
                 logger.info(f"Descargando datos desde {start_date} hasta {end_date}...")
