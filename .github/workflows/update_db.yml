@@ -1,6 +1,9 @@
 name: Update Database Daily
 
 on:
+  push:
+    branches: [ "main" ] 
+    
   schedule:
     - cron: '0 20 * * *' # Cada día a las 20:00
   workflow_dispatch:  # Permite ejecución manual
