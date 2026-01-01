@@ -47,21 +47,17 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
         query = f"SELECT date FROM weekly_stats.weekly_stats_{athlete} ORDER BY date DESC LIMIT 1"
         try:
             result = pd.read_sql_query(query, pool)
-            start_date = datetime.date.fromisoformat(result['date'].values[0])
             end_date = datetime.date.today()
-            if start_date <= end_date:
-                logger.info(f"Descargando datos desde {start_date} hasta {end_date}...")
-                weekly_stats_data = download_data.summary_stats(start_date, end_date)
-                logger.info("✓ Datos descargados")
+            start_date = end_date - datetime.timedelta(days=1)
+            logger.info(f"Descargando datos desde {start_date} hasta {end_date}...")
+            weekly_stats_data = download_data.summary_stats(start_date, end_date)
+            logger.info("✓ Datos descargados")
                 
-                logger.info(f"Guardando datos para {athlete}...")
-                clean_data = CleanData(athletes[athletes_unified.index(athlete)])
-                df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athlete, result)
-                # create table
-                df_weekly_stats.to_sql(f'weekly_stats_{athlete}', pool, if_exists='append', index=False)
-            else:
-                logger.info("No hay nuevos datos para descargar")
-            logger.info(f"✓ Datos existentes en la base de datos para {athlete}")
+            logger.info(f"Guardando datos para {athlete}...")
+            clean_data = CleanData(athletes[athletes_unified.index(athlete)])
+            df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athlete, result)
+            # create table
+            df_weekly_stats.to_sql(f'weekly_stats_{athlete}', pool, if_exists='append', index=False)
 
         except Exception as e:
             logger.info("No existen datos en la base de datos")
@@ -71,12 +67,12 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
             ########      DOWNLOAD WEEKLY STATS DATA     ########
             ########-------------------------------------########
             logger.info("Descargando estadísticas semanales...")
-            end_date = datetime.date.today()
+            end_date = datetime.date.today() - datetime.timedelta(days=2) # vuelta lo normal despues d eprobar
             logger.info(f"Fecha fin: {end_date}")
             
-            start_date = end_date - datetime.timedelta(days=30)
+            start_date = end_date - datetime.timedelta(days=366)
             old_weekly_stats_df = pd.DataFrame()
-            logger.info(f"Archivo nuevo. Descargando últimos 30 días desde: {start_date}")
+            logger.info(f"Archivo nuevo. Descargando últimos 366 días desde: {start_date}")
             
             if start_date <= end_date:
                 logger.info(f"Descargando datos desde {start_date} hasta {end_date}...")
