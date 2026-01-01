@@ -5,6 +5,9 @@ on:
     branches: [ "main" ]
     paths:
       - 'applications/weekly_email.py'
+      - 'requirements_min.txt'
+      - 'Dockerfile.update_db'
+      - 'utils/**'
   schedule:
     - cron: '0 21 * * 0' # Cada domingo a las 21:00
   workflow_dispatch:  # Permite ejecución manual

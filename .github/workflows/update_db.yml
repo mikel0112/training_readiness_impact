@@ -5,6 +5,9 @@ on:
     branches: [ "main" ] 
     paths:
       - 'applications/update_database.py'
+      - 'requirements_min.txt'
+      - 'Dockerfile.update_db'
+      - 'utils/**'
   schedule:
     - cron: '0 20 * * *' # Cada día a las 20:00
   workflow_dispatch:  # Permite ejecución manual
