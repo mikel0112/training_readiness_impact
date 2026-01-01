@@ -4,9 +4,9 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - 'applications/weekly_email.py'
+      - 'applications/weekly_summary_email.py'
       - 'requirements_min.txt'
-      - 'Dockerfile.update_db'
+      - 'Dockerfile'
       - 'utils/**'
   schedule:
     - cron: '0 21 * * 0' # Cada domingo a las 21:00
