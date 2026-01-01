@@ -9,6 +9,7 @@ import pandas as pd
 import time
 import logging
 import datetime
+from flask import Flask
 
 
 
@@ -20,8 +21,15 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# Esto le dice a Python que busque archivos en la carpeta actual del script
+dir_actual = os.path.dirname(os.path.abspath(__file__))
+if dir_actual not in sys.path:
+    sys.path.append(dir_actual)
 
-def update_weekly_stats_data(pool, coach_id, api_key, coach_name):
+
+app = Flask(__name__)
+
+def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_dict):
     logger.info("Comprobando si existen datos en la base de datos...")
     # list of athletes
     athletes = []
@@ -106,25 +114,55 @@ def update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name):
     pd.read_sql_query(query, pool)
 
     # update weekly_stats_moving_averages table
+
+@app.route("/")
+def home():
+    try:
+        logger.info("\n" + "#"*60)
+        logger.info("### PETICIÓN RECIBIDA DEL SCHEDULER ###")
+        logger.info("#"*60 + "\n")
+        
+        project_id = "weeklytrainingemail"
+        secret_id = "p-info-json"
+        gc_credentials = GCcredential(project_id, secret_id)
+        credentials_dict = gc_credentials.get_credentials_from_secret()
+        gc_mysql = GCMySQL(credentials_dict)
+        connector = gc_mysql.get_db_connection()
+        pool = gc_mysql.sqlalchemy_engine()
+
+        # update database
+        for user, data in credentials_dict.items():
+            try:
+                if data['role'] == "coach":
+                    coach_name = user
+                    logger.info(f"Coach identificado: {coach_name}")
+                
+                    coach_id = credentials_dict[coach_name]["id"]
+                    api_key = credentials_dict[coach_name]["password"]
+
+            except:
+                pass
+        update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_dict)
+        
+        logger.info("\n### Esperando 10 segundos antes de responder... ###")
+        time.sleep(10)
+        
+        logger.info("### RESPUESTA ENVIADA AL SCHEDULER ###\n")
+        return "Base de datos actualizada correctamente.", 200
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"\n❌ ERROR EN EL ENDPOINT: {e}")
+        logger.error(traceback.format_exc())
+        return f"Error: {e}", 500
+
+@app.route("/health")
+def health():
+    return "OK", 200
+
+
 if __name__ == "__main__":
-    project_id = "weeklytrainingemail"
-    secret_id = "p-info-json"
-    gc_credentials = GCcredential(project_id, secret_id)
-    credentials_dict = gc_credentials.get_credentials_from_secret()
-    gc_mysql = GCMySQL(credentials_dict)
-    connector = gc_mysql.get_db_connection()
-    pool = gc_mysql.sqlalchemy_engine()
 
-    # update database
-    for user, data in credentials_dict.items():
-        try:
-            if data['role'] == "coach":
-                coach_name = user
-                logger.info(f"Coach identificado: {coach_name}")
-            
-                coach_id = credentials_dict[coach_name]["id"]
-                api_key = credentials_dict[coach_name]["password"]
-
-        except:
-            pass
-    update_weekly_stats_data(pool, coach_id, api_key, coach_name)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+    
