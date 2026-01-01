@@ -88,7 +88,24 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name):
                 logger.info("No hay nuevos datos para descargar")
                 break
 
+def update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name):
+    columns = ['Athlete varchar(255) NOT NULL PRIMARY KEY',
+            'MA_form_4w float',
+            'MA_form_12w float',
+            'MA_form_52w float',
+            'MA_time_4w float',
+            'MA_time_12w float',
+            'MA_time_52w float',
+            'MA_elevation_4w float',
+            'MA_elevation_12w float',
+            'MA_elevation_52w float'
+        ]
+    # use columns to create query
+    table_columns = ', '.join(columns)
+    query = f"CREATE TABLE IF NOT EXISTS weekly_stats.weekly_stats_moving_averages ({table_columns})"
+    pd.read_sql_query(query, pool)
 
+    # update weekly_stats_moving_averages table
 if __name__ == "__main__":
     project_id = "weeklytrainingemail"
     secret_id = "p-info-json"

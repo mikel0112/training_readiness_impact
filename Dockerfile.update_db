@@ -1,0 +1,10 @@
+FROM python:3.10-slim
+WORKDIR /app
+COPY requirements_min.txt .
+RUN pip install --no-cache-dir -r requirements_min.txt
+RUN mkdir -p /app/outputs /app/data
+RUN chmod -R 777 /app/outputs /app/data
+COPY . .
+# Esto añade la carpeta actual al PATH de Python
+ENV PYTHONPATH="${PYTHONPATH}:/app"
+CMD ["python", "applications/update_database.py"]
