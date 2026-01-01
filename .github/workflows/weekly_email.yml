@@ -1,4 +1,4 @@
-name: Build, Push and Deploy to Cloud Run
+name: Weekly Email Deployment
 
 on:
   push:
