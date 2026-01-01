@@ -184,7 +184,7 @@ class WriteEmail():
             for key,values in info.items():
                 if 'icu_name' in values.keys():
                     if values['icu_name'] == athlete_name:
-                        #correo = values['email']
+                        #correo = values['email'] #############cambiarrrrrrrrrrrrr
                         correo = 'mikelcampo0112@gmail.com'
                         logger.info(f"Email destino encontrado: {correo}")
             
@@ -231,8 +231,8 @@ def ejecutar_proceso_completo():
         
         date = datetime.datetime.today() - datetime.timedelta(days=6) 
         date_string = date.strftime("%Y-%m-%d")
-        date_string = "2025-12-22"
-        logger.info(f"Fecha de reporte: {date_string}")
+        date_string_x = "2025-12-22" #####eliminarrrrrrrrrrrrr
+        logger.info(f"Fecha de reporte: {date_string_x}")#ojooooooooooo
         
         email_count = 0
         for key, values in credentials_info.items():
@@ -244,7 +244,7 @@ def ejecutar_proceso_completo():
                     name_unified = athlete_name.replace(" ", "_")
                     logger.info(f"\n--- Procesando atleta #{email_count+1}: {athlete_name} ---")
                     # query data from athlete
-                    query = f"SELECT * FROM weekly_stats.weekly_stats_{name_unified} WHERE date = '{date_string}'"
+                    query = f"SELECT * FROM weekly_stats.weekly_stats_{name_unified} WHERE date = '{date_string_x}'" ##ojoooooooooo
                     df = pd.read_sql_query(query, pool)
                     # if no data, skip
                     if df['time'].values[0] == 0.0:
