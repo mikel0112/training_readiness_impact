@@ -3,6 +3,11 @@ name: Weekly Email Deployment
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'applications/weekly_email.py'
+  schedule:
+    - cron: '0 21 * * 0' # Cada domingo a las 21:00
+  workflow_dispatch:  # Permite ejecución manual
 
 permissions:
   contents: read
