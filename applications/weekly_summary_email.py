@@ -184,8 +184,8 @@ class WriteEmail():
             for key,values in info.items():
                 if 'icu_name' in values.keys():
                     if values['icu_name'] == athlete_name:
-                        correo = values['email']
-                        #correo = 'mikelcampo0112@gmail.com'
+                        #correo = values['email']
+                        correo = 'mikelcampo0112@gmail.com'
                         logger.info(f"Email destino encontrado: {correo}")
             
             logger.info(f"Enviando email a {correo}...")
@@ -231,6 +231,7 @@ def ejecutar_proceso_completo():
         
         date = datetime.datetime.today() - datetime.timedelta(days=6) 
         date_string = date.strftime("%Y-%m-%d")
+        date_string = "2025-12-22"
         logger.info(f"Fecha de reporte: {date_string}")
         
         email_count = 0

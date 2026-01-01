@@ -64,6 +64,7 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
                 df_weekly_stats.to_sql(f'weekly_stats_{athlete}', pool, if_exists='append', index=False)
             else:
                 logger.info("No es domingo, no se descargan datos")
+                break
 
         except Exception as e:
             logger.info("No existen datos en la base de datos")
