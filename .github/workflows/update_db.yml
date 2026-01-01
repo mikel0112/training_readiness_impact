@@ -2,7 +2,7 @@ name: Update Database Daily
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # Todos los días a las 6:00 AM UTC
+    - cron: '0 20 * * *' # Cada día a las 20:00
   workflow_dispatch:  # Permite ejecución manual
 
 permissions:
