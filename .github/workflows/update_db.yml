@@ -9,7 +9,7 @@ on:
       - 'Dockerfile.update_db'
       - 'utils/**'
   schedule:
-    - cron: '0 20 * * *' # Cada día a las 20:00
+    - cron: '0 23 * * *' # Cada día a las 23:00
   workflow_dispatch:  # Permite ejecución manual
 
 permissions:

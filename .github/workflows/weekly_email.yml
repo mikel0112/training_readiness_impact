@@ -9,7 +9,7 @@ on:
       - 'Dockerfile'
       - 'utils/**'
   schedule:
-    - cron: '0 21 * * 0' # Cada domingo a las 21:00
+    - cron: '0 6 * *1' # Cada lunes a las 6:00
   workflow_dispatch:  # Permite ejecución manual
 
 permissions:
