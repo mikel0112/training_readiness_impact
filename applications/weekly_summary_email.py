@@ -229,7 +229,7 @@ def ejecutar_proceso_completo():
         logger.info("INICIANDO ENVÍO DE EMAILS")
         logger.info("="*60)
         
-        date = datetime.datetime.today() - datetime.timedelta(days=6) 
+        date = datetime.datetime.today() - datetime.timedelta(days=7) 
         date_string = date.strftime("%Y-%m-%d")
         logger.info(f"Fecha de reporte: {date_string}")
         
