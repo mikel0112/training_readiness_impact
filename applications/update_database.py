@@ -70,7 +70,7 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
                     
             logger.info(f"Guardando datos para {athlete}...")
             clean_data = CleanData(athletes[athletes_unified.index(athlete)])
-            df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athlete, old_weekly_stats_df)
+            df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athlete)
             logger.info(f"El index es: {df_weekly_stats.index}")
             # create table
             df_weekly_stats.to_sql(f'weekly_stats_{athlete}', pool, if_exists='append', index=False)

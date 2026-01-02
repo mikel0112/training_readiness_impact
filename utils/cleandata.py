@@ -140,5 +140,4 @@ class CleanData:
         clean_df['strength_time'] = clean_df['strength_time'] / 3600
         clean_df['strength_distance'] = clean_df['strength_distance'] / 1000
 
-        df_weekly_stats = pd.concat([old_weekly_stats_df, clean_df], ignore_index=True)
-        return df_weekly_stats
+        return clean_df
