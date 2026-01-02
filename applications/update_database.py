@@ -62,15 +62,13 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
                 conn.execute(query_1)
                 conn.execute(query_2)
             # download new data
-            query = f"SELECT date FROM weekly_stats.weekly_stats_{athlete} ORDER BY date DESC"
-            old_weekly_stats_df = pd.read_sql_query(query, pool)
             logger.info(f"Descargando datos desde {previous_week_data} hasta {end_date}...")
             weekly_stats_data = download_data.summary_stats(previous_week_data, end_date)
             logger.info("✓ Datos descargados")
                     
             logger.info(f"Guardando datos para {athlete}...")
             clean_data = CleanData(athletes[athletes_unified.index(athlete)])
-            df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athlete)
+            df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athletes[athletes_unified.index(athlete)])
             logger.info(f"El index es: {df_weekly_stats.index}")
             logger.info(f"El shape es: {df_weekly_stats.shape}")
             # create table
