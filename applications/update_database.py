@@ -10,6 +10,7 @@ import time
 import logging
 import datetime
 from flask import Flask
+from sqlalchemy import text
 
 
 
@@ -54,8 +55,8 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
             start_date = end_date - datetime.timedelta(days=weekday) 
             # eliminar datos de la base de datos
             previous_week_data = start_date - datetime.timedelta(days=7)
-            query_1 = f"DELETE FROM weekly_stats.weekly_stats_{athlete} WHERE date = '{start_date}'"
-            query_2 = f"DELETE FROM weekly_stats.weekly_stats_{athlete} WHERE date = '{previous_week_data}'"
+            query_1 = text(f"DELETE FROM weekly_stats.weekly_stats_{athlete} WHERE date = '{start_date}'")
+            query_2 = text(f"DELETE FROM weekly_stats.weekly_stats_{athlete} WHERE date = '{previous_week_data}'")
             # execute query
             with pool.begin() as conn:
                 conn.execute(query_1)
