@@ -53,12 +53,14 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
             #if weekday == 6:
             start_date = end_date - datetime.timedelta(days=weekday) 
             # eliminar datos de la base de datos
+            previous_week_data = start_date - datetime.timedelta(days=7)
             query = f"DELETE FROM weekly_stats.weekly_stats_{athlete} WHERE date = '{start_date}'"
+            query = f"DELETE FROM weekly_stats.weekly_stats_{athlete} WHERE date = '{previous_week_data}'"
             pool.execute(query)
             query = f"SELECT date FROM weekly_stats.weekly_stats_{athlete} ORDER BY date DESC"
             old_weekly_stats_df = pd.read_sql_query(query, pool)
-            logger.info(f"Descargando datos desde {start_date} hasta {end_date}...")
-            weekly_stats_data = download_data.summary_stats(start_date, end_date)
+            logger.info(f"Descargando datos desde {previous_week_data} hasta {end_date}...")
+            weekly_stats_data = download_data.summary_stats(previous_week_data, end_date)
             logger.info("✓ Datos descargados")
                     
             logger.info(f"Guardando datos para {athlete}...")
