@@ -29,7 +29,7 @@ if dir_actual not in sys.path:
 
 app = Flask(__name__)
 
-def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_dict):
+def update_weekly_stats_data(conn, pool, coach_id, api_key, coach_name, credentials_dict):
     logger.info("Comprobando si existen datos en la base de datos...")
     # list of athletes
     athletes = []
@@ -56,7 +56,9 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
             previous_week_data = start_date - datetime.timedelta(days=7)
             query = f"DELETE FROM weekly_stats.weekly_stats_{athlete} WHERE date = '{start_date}'"
             query = f"DELETE FROM weekly_stats.weekly_stats_{athlete} WHERE date = '{previous_week_data}'"
-            pool.execute(query)
+            # execute query
+            conn.execute(query)
+            # download new data
             query = f"SELECT date FROM weekly_stats.weekly_stats_{athlete} ORDER BY date DESC"
             old_weekly_stats_df = pd.read_sql_query(query, pool)
             logger.info(f"Descargando datos desde {previous_week_data} hasta {end_date}...")
@@ -153,7 +155,7 @@ def home():
 
             except:
                 pass
-        update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_dict)
+        update_weekly_stats_data(connector, pool, coach_id, api_key, coach_name, credentials_dict)
         
         logger.info("\n### Esperando 10 segundos antes de responder... ###")
         time.sleep(10)
