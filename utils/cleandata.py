@@ -1,4 +1,12 @@
 import pandas as pd
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+logger = logging.getLogger(__name__)
 
 class CleanData:
     def __init__(self, athlete_name):
@@ -133,5 +141,6 @@ class CleanData:
         clean_df['strength_distance'] = clean_df['strength_distance'] / 1000
 
         df_weekly_stats = pd.concat([old_weekly_stats_df, clean_df], ignore_index=True)
+        logger.info(f"Columnas de df_weekly_stats: {df_weekly_stats.columns}")
         
         return df_weekly_stats
