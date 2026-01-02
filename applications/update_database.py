@@ -91,7 +91,6 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
             logger.info(f"Fecha fin: {end_date}")
             
             start_date = end_date - datetime.timedelta(days=366)
-            old_weekly_stats_df = pd.DataFrame()
             logger.info(f"Archivo nuevo. Descargando últimos 366 días desde: {start_date}")
             
             if start_date <= end_date:
@@ -103,7 +102,7 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
                 clean_data = CleanData(coach_name)
                 for athl in athletes:
                     logger.info(f"Guardando datos para {athl}...")
-                    df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athl, old_weekly_stats_df)
+                    df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athl)
                     df_columns = df_weekly_stats.columns.tolist()
                     # create table
                     df_weekly_stats.to_sql(f'weekly_stats_{athletes_unified[athletes.index(athl)]}', pool, if_exists='append', index=False)
