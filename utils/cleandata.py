@@ -63,7 +63,7 @@ class CleanData:
         activities_clean_df = pd.concat([old_act_df, activities_clean_df], ignore_index=True)
         return activities_clean_df
         
-    def weekly_stats_data(self, weekly_stats_data, athlete, old_weekly_stats_df):
+    def weekly_stats_data(self, weekly_stats_data, athlete):
         df_weekly_stats = pd.DataFrame(weekly_stats_data)
         df_weekly_stats = df_weekly_stats[df_weekly_stats['athlete_name'] == athlete]
         clean_df = df_weekly_stats[[
