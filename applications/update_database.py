@@ -44,21 +44,26 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
     for athlete in athletes_unified:
         # extract latest date in any of the tables
         logger.info(f"Buscando datos para {athlete} en la base de datos...")
-        query = f"SELECT date FROM weekly_stats.weekly_stats_{athlete} ORDER BY date DESC"
+        query = f"SELECT date FROM weekly_stats.weekly_stats_{athlete} ORDER BY date DESC LIMIT 1"
         try:
             result = pd.read_sql_query(query, pool)
             end_date = datetime.date.today()
-            #weekday = end_date.weekday()
+            weekday = end_date.weekday()
             # download weekly data just on sundays
             #if weekday == 6:
-            start_date = end_date - datetime.timedelta(days=1)
+            start_date = end_date - datetime.timedelta(days=weekday) 
+            # eliminar datos de la base de datos
+            query = f"DELETE FROM weekly_stats.weekly_stats_{athlete} WHERE date = '{start_date}'"
+            pool.execute(query)
+            query = f"SELECT date FROM weekly_stats.weekly_stats_{athlete} ORDER BY date DESC"
+            old_weekly_stats_df = pd.read_sql_query(query, pool)
             logger.info(f"Descargando datos desde {start_date} hasta {end_date}...")
             weekly_stats_data = download_data.summary_stats(start_date, end_date)
             logger.info("✓ Datos descargados")
                     
             logger.info(f"Guardando datos para {athlete}...")
             clean_data = CleanData(athletes[athletes_unified.index(athlete)])
-            df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athlete, result)
+            df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athlete, old_weekly_stats_df)
             logger.info(f"El index es: {df_weekly_stats.index}")
             # create table
             df_weekly_stats.to_sql(f'weekly_stats_{athlete}', pool, if_exists='append', index=False)
