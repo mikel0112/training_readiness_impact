@@ -74,8 +74,8 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
             ########      DOWNLOAD WEEKLY STATS DATA     ########
             ########-------------------------------------########
             logger.info("Descargando estadísticas semanales...")
-            today = datetime.date.today()
-            end_date = today - datetime.timedelta(days=today.weekday()) - datetime.timedelta(days=2)
+
+            end_date = datetime.date.today() - datetime.timedelta(days=2)
             logger.info(f"Fecha fin: {end_date}")
             
             start_date = end_date - datetime.timedelta(days=366)
