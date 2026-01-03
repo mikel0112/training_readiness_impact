@@ -191,6 +191,7 @@ def home():
             except:
                 pass
         update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_dict)
+        update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, credentials_dict)
         
         logger.info("\n### Esperando 10 segundos antes de responder... ###")
         time.sleep(10)
