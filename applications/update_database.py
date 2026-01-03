@@ -72,7 +72,7 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
             logger.info(f"El index es: {df_weekly_stats.index}")
             logger.info(f"El shape es: {df_weekly_stats.shape}")
             # create table
-            df_weekly_stats.to_sql(f'weekly_stats_{athlete}', pool, if_exists='append', index=False)
+            df_weekly_stats.to_sql(f'weekly_stats_{athlete}', pool, schema='weekly_stats', if_exists='append', index=False)
             #else:
                 #logger.info("No es domingo, no se descargan datos")
                 #break
@@ -104,7 +104,7 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
                     df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athl)
                     df_columns = df_weekly_stats.columns.tolist()
                     # create table
-                    df_weekly_stats.to_sql(f'weekly_stats_{athletes_unified[athletes.index(athl)]}', pool, if_exists='append', index=False)
+                    df_weekly_stats.to_sql(f'weekly_stats_{athletes_unified[athletes.index(athl)]}', pool, schema='weekly_stats', if_exists='append', index=False)
                 break
             else:
                 logger.info("No hay nuevos datos para descargar")
@@ -165,7 +165,7 @@ def update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, cre
 
     moving_avg_df = pd.DataFrame(data)
     # save data
-    moving_avg_df.to_sql('weekly_stats_moving_averages', pool, if_exists='append', index=False)
+    moving_avg_df.to_sql('weekly_stats_moving_averages', pool, schema='weekly_stats', if_exists='append', index=False)
 
 
 def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials_dict):
@@ -193,7 +193,7 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
 
             wellness_data = download_data.wellness(start_date, end_date, id)
             wellness_df = clean_data.wellness_data(wellness_data)
-            wellness_df.to_sql(f'wellness_daily_{athlete}', pool, if_exists='append', index=False)
+            wellness_df.to_sql(f'wellness_daily_{athlete}', pool, schema='wellness_data', if_exists='append', index=False)
         except:
             logger.info(f"No hay datos para {athlete}")
             start_date = "2025-01-01"
@@ -207,7 +207,7 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
             with pool.begin() as conn:
                 conn.execute(query)
                 conn.commit()
-            wellness_df.to_sql(f'wellness_daily_{athlete}', pool, if_exists='append', index=False)
+            wellness_df.to_sql(f'wellness_daily_{athlete}', pool, schema='wellness_data', if_exists='append', index=False)
 
 @app.route("/")
 def home():
