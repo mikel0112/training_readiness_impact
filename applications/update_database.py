@@ -182,7 +182,7 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
     # creata table
     for athlete in athletes_unified:
         logger.info(f"Guardando datos para {athlete}...")
-        if athlete == 'Mikel_Campo': # cambiar cuando ids del resto
+        #if athlete == 'Mikel_Campo': # cambiar cuando ids del resto
             try:
                 query = f"SELECT * FROM wellness_data.wellness_daily_{athlete}"
                 df_athlete = pd.read_sql(query, pool)
