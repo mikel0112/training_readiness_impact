@@ -135,18 +135,6 @@ def update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, cre
         athletes_unified.append(name_unified)
         athletes.append(data['icu_name'])
     logger.info(f"Atletas encontrados: {athletes}")
-    moving_avg_df = pd.DataFrame(columns=[
-        'Athlete', 
-        'MA_form_4w', 
-        'MA_form_12w', 
-        'MA_form_52w', 
-        'MA_time_4w', 
-        'MA_time_12w', 
-        'MA_time_52w', 
-        'MA_elevation_4w', 
-        'MA_elevation_12w', 
-        'MA_elevation_52w'
-    ])
 
     # extract data from every athlete for the last 52 weeks
     data = []
@@ -158,7 +146,7 @@ def update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, cre
 
         # calculate moving averages
         athlete_data = {
-        'Athlete': athlete,
+        'Athlete': athletes[athletes_unified.index(athlete)],
         'MA_form_4w': df_athlete['form'].iloc[0:4].mean(),
         'MA_form_12w': df_athlete['form'].iloc[0:12].mean(),
         'MA_form_52w': df_athlete['form'].mean(),
