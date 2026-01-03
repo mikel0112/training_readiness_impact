@@ -98,11 +98,11 @@ class WriteEmail():
 
         
         # fill the back space with different colors based on y values horizontally
-        plt.fill_between([0, 1], -30, -100, color='red')
-        plt.fill_between([0, 1], -10, -30, color='green')
-        plt.fill_between([0, 1], 5, -10, color='gray')
-        plt.fill_between([0, 1], 20, 5, color='blue')
-        plt.fill_between([0, 1], 100, 20, color='yellow')
+        plt.fill_between([0, 1], -30, -100, color='lightcoral')
+        plt.fill_between([0, 1], -10, -30, color='yellowgreen')
+        plt.fill_between([0, 1], 5, -10, color='lightgray')
+        plt.fill_between([0, 1], 20, 5, color='lightblue')
+        plt.fill_between([0, 1], 100, 20, color='lightyellow')
 
         # add legend
         plt.legend()
