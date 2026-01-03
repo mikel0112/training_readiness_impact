@@ -87,7 +87,7 @@ class WriteEmail():
         else:
             bar_color = 'yellow'
         plt.figure(figsize=(10, 5))
-        plt.bar(['Form'], [form], color=bar_color, label='Form')
+        plt.bar([0.5], [form], color=bar_color, label='Form')
         
         # add horizontal lines
         plt.axhline(y=-30, color='red', linestyle='solid', label='Riesgo Alto')
@@ -108,7 +108,7 @@ class WriteEmail():
         plt.legend()
 
         # add labels
-        plt.xlabel('Form')
+        plt.ylabel('Form')
         plt.title('Impacto de la carga de entrenamiento', fontsize=16, fontweight='bold')
         
         os.makedirs(f"outputs/{self.athlete_name}/email",exist_ok=True)
@@ -241,15 +241,15 @@ class WriteEmail():
 
             # pdf_athlete
             athlete_name_unified = athlete_name.replace(" ", "_")
-            pdf_athlete_output = f"outputs/{athlete_name}/email/{date}.pdf_athlete"
+            pdf_athlete_output = f"outputs/{athlete_name}/email/{date}.pdf"
             logger.info(f"Generando Pdf_athlete: {pdf_athlete_output}")
             # convert str to datetime date
             date = datetime.date.fromisoformat(date)
             last_pdf_athlete_date = date - datetime.timedelta(days=7)
             # convert date to str
             last_pdf_athlete_date = last_pdf_athlete_date.strftime("%Y-%m-%d")
-            if os.path.exists(f"outputs/{athlete_name}/email/{last_pdf_athlete_date}.pdf_athlete"):
-                os.remove(f"outputs/{athlete_name}/email/{last_pdf_athlete_date}.pdf_athlete")
+            if os.path.exists(f"outputs/{athlete_name}/email/{last_pdf_athlete_date}.pdf"):
+                os.remove(f"outputs/{athlete_name}/email/{last_pdf_athlete_date}.pdf")
             generar_pdf_athlete_deportista(pdf_athlete_output, athlete_name)
             logger.info(f"✓ Pdf_athlete generado correctamente")
 
@@ -265,8 +265,8 @@ class WriteEmail():
             for key,values in info.items():
                 if 'icu_name' in values.keys():
                     if values['icu_name'] == athlete_name:
-                        #correo = values['email']
-                        correo = 'mikelcampo0112@gmail.com'
+                        correo = values['email']
+                        #correo = 'mikelcampo0112@gmail.com'
                         logger.info(f"Email destino encontrado: {correo}")
             
             logger.info(f"Enviando email a {correo}...")
@@ -310,8 +310,8 @@ def ejecutar_proceso_completo():
         logger.info("="*60)
         
         date = datetime.datetime.today() - datetime.timedelta(days=7) 
-        #date_string = date.strftime("%Y-%m-%d")
-        date_string = '2025-12-29'
+        date_string = date.strftime("%Y-%m-%d")
+        #date_string = '2025-12-29'
         logger.info(f"Fecha de reporte: {date_string}")
         
         email_count = 0
