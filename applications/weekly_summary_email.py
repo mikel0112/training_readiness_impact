@@ -220,8 +220,7 @@ def ejecutar_proceso_completo():
         logger.info("✓ Credenciales cargadas exitosamente")
 
         gc_mysql = GCMySQL(credentials_info)
-        connector = gc_mysql.get_db_connection()
-        pool = gc_mysql.sqlalchemy_engine()        
+        pool = gc_mysql.sqlalchemy_engine(db_name="weekly_stats")        
 
         #---------------------------------------------------#
         #---------------------------------------------------#

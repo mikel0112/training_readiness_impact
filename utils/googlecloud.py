@@ -71,27 +71,28 @@ class GCMySQL():
         self.db_user = self._credentials['database']['user']
         self.db_password = self._credentials['database']['password'] 
 
-    def get_db_connection(self, db_name):
+    def sqlalchemy_engine(self, db_name):
+        """Crea un engine de SQLAlchemy con Cloud SQL Connector"""
         project_id = "weeklytrainingemail"
         region = "europe-southwest1"
         instance_name = "weekyemail"
         self.get_db_user_info()
-        db_user = self.db_user
-        db_password = self.db_password
+        
         connection_name = f"{project_id}:{region}:{instance_name}"
-
         connector = Connector()
 
-        conn = connector.connect(
-            connection_name,
-            "pymysql",
-            user=db_user,
-            password=db_password,
-            db=db_name,
-        )
+        def getconn():
+            conn = connector.connect(
+                connection_name,
+                "pymysql",
+                user=self.db_user,
+                password=self.db_password,
+                db=db_name,
+            )
+            return conn
 
-        return conn
-    
-    def sqlalchemy_engine(self):
-        engine = sqlalchemy.create_engine("mysql+pymysql://", creator=self.get_db_connection)
+        engine = sqlalchemy.create_engine(
+            "mysql+pymysql://",
+            creator=getconn
+        )
         return engine

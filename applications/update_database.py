@@ -129,7 +129,6 @@ def update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, cre
     with pool.begin() as conn:
         conn.execute(query_1)
         conn.execute(query_2)
-        conn.commit()
     
     athletes_unified = []
     athletes = []
@@ -206,7 +205,6 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
             query = text(f"CREATE TABLE IF NOT EXISTS wellness_data.wellness_daily_{athlete} (date DATE, rampRate FLOAT, weight FLOAT, restingHR FLOAT, hrv FLOAT, sleepSecs FLOAT, mood FLOAT, injury FLOAT);")
             with pool.begin() as conn:
                 conn.execute(query)
-                conn.commit()
             wellness_df.to_sql(f'wellness_daily_{athlete}', pool, schema='wellness_data', if_exists='append', index=False)
 
 @app.route("/")
@@ -234,12 +232,10 @@ def home():
 
             except:
                 pass
-        connector = gc_mysql.get_db_connection(db_name="weekly_stats")
-        pool = gc_mysql.sqlalchemy_engine()
+        pool = gc_mysql.sqlalchemy_engine(db_name="weekly_stats")
         update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_dict)
         update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, credentials_dict)
-        connector = gc_mysql.get_db_connection(db_name="wellness_data")
-        pool = gc_mysql.sqlalchemy_engine()
+        pool = gc_mysql.sqlalchemy_engine(db_name="wellness_data")
         update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials_dict)
         
         logger.info("\n### Esperando 10 segundos antes de responder... ###")
