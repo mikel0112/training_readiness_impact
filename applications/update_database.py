@@ -172,6 +172,7 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
     clean_data = CleanData(coach_name)
     athletes_unified = []
     athletes = []
+    keys_list = list(credentials_dict.keys())
     for key, data in credentials_dict.items():
         if 'icu_name' in data:
             name_unified = data['icu_name'].replace(" ", "_")
@@ -189,7 +190,7 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
                 logger.info(f"El shape es: {df_athlete.shape}")
                 start_date = datetime.date.today()
                 end_date = start_date
-                id = credentials_dict[athletes[athletes_unified.index(athlete)]]["id"]
+                id = credentials_dict[keys_list[athletes_unified.index(athlete)]]["id"]
 
                 wellness_data = download_data.wellness(start_date, end_date, id)
                 wellness_df = clean_data.wellness_data(wellness_data)
