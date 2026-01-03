@@ -27,6 +27,8 @@ class CleanData:
         clean_df = wellness_df[interesting_columns]
         clean_df = clean_df.rename(columns={"id": "date"})
         clean_df["sleepSecs"] = clean_df["sleepSecs"] / 3600
+        # none values to 0
+        clean_df.fillna(0, inplace=True)
         return clean_df
     
 
