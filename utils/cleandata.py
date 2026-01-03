@@ -12,8 +12,8 @@ class CleanData:
     def __init__(self, athlete_name):
         self.athlete_name = athlete_name
 
-    def wellness_data(self, wellness_data):
-        wellness_df = pd.DataFrame(wellness_data)
+    def wellness_data(self, wellness_data_dict):
+        wellness_df = pd.DataFrame(wellness_data_dict)
         interesting_columns = [
             "id",
             "rampRate",
@@ -25,6 +25,7 @@ class CleanData:
             "injury",
         ]
         clean_df = wellness_df[interesting_columns]
+        logger.info(f"El head es: {clean_df.head()}")
         clean_df = clean_df.rename(columns={"id": "date"})
         clean_df["sleepSecs"] = clean_df["sleepSecs"] / 3600
         # none values to 0
