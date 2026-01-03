@@ -45,7 +45,7 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
     for athlete in athletes_unified:
         # extract latest date in any of the tables
         logger.info(f"Buscando datos para {athlete} en la base de datos...")
-        query = f"SELECT date FROM weekly_stats_{athlete} ORDER BY date DESC LIMIT 1"
+        query = f"SELECT date FROM weekly_stats.weekly_stats_{athlete} ORDER BY date DESC LIMIT 1"
         try:
             result = pd.read_sql_query(query, pool)
             end_date = datetime.date.today()
@@ -55,8 +55,8 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
             start_date = end_date - datetime.timedelta(days=weekday) 
             # eliminar datos de la base de datos
             previous_week_data = start_date - datetime.timedelta(days=7)
-            query_1 = text(f"DELETE FROM weekly_stats_{athlete} WHERE date = '{start_date}'")
-            query_2 = text(f"DELETE FROM weekly_stats_{athlete} WHERE date = '{previous_week_data}'")
+            query_1 = text(f"DELETE FROM weekly_stats.weekly_stats_{athlete} WHERE date = '{start_date}'")
+            query_2 = text(f"DELETE FROM weekly_stats.weekly_stats_{athlete} WHERE date = '{previous_week_data}'")
             # execute query
             with pool.begin() as conn:
                 conn.execute(query_1)
@@ -144,7 +144,7 @@ def update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, cre
     data = []
     for athlete in athletes_unified:
         logger.info(f"Guardando datos para {athlete}...")
-        query = f"SELECT * FROM weekly_stats_{athlete} ORDER BY date DESC LIMIT 52"
+        query = f"SELECT * FROM weekly_stats.weekly_stats_{athlete} ORDER BY date DESC LIMIT 52"
         df_athlete = pd.read_sql(query, pool)
         logger.info(f"El shape es: {df_athlete.shape}")
 
@@ -184,7 +184,7 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
     for athlete in athletes_unified:
         logger.info(f"Guardando datos para {athlete}...")
         try:
-            query = f"SELECT * FROM wellness_daily_{athlete}"
+            query = f"SELECT * FROM wellness_data.wellness_daily_{athlete}"
             df_athlete = pd.read_sql(query, pool)
             logger.info(f"El shape es: {df_athlete.shape}")
             start_date = datetime.date.today()
@@ -203,7 +203,7 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
             logger.info(f"Descargabdo datos desde {start_date} hasta {end_date} para {athlete}")
             wellness_data_dict = download_data.wellness(start_date, end_date, id)
             wellness_df = clean_data.wellness_data(wellness_data_dict)
-            query = text(f"CREATE TABLE IF NOT EXISTS wellness_daily_{athlete} (date DATE, rampRate FLOAT, weight FLOAT, restingHR FLOAT, hrv FLOAT, sleepSecs FLOAT, mood FLOAT, injury FLOAT);")
+            query = text(f"CREATE TABLE IF NOT EXISTS wellness_data.wellness_daily_{athlete} (date DATE, rampRate FLOAT, weight FLOAT, restingHR FLOAT, hrv FLOAT, sleepSecs FLOAT, mood FLOAT, injury FLOAT);")
             with pool.begin() as conn:
                 conn.execute(query)
                 conn.commit()
