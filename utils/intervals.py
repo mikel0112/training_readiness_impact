@@ -173,7 +173,7 @@ class Intervals:
             respiration,
         )
 
-    def wellness(self, start_date, end_date=None):
+    def wellness(self, start_date, end_date=None, athlete=None):
         """ """
         if type(start_date) is not datetime.date:
             raise TypeError("dateperrequired")
@@ -191,7 +191,7 @@ class Intervals:
             )
         else:
             url = "{}/api/v1/athlete/{}/wellness/{}".format(
-                Intervals.BASE_URL, self.athlete_id, start_date.isoformat()
+                Intervals.BASE_URL, athlete, start_date.isoformat()
             )
 
         res = self._make_request("get", url, params)
