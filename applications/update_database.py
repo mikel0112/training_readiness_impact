@@ -130,7 +130,7 @@ def update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, cre
     
     athletes_unified = []
     athletes = []
-    for data in credentials_dict.values():
+    for key, data in credentials_dict.items():
         name_unified = data['icu_name'].replace(" ", "_")
         athletes_unified.append(name_unified)
         athletes.append(data['icu_name'])
