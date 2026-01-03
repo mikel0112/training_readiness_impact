@@ -231,6 +231,14 @@ class WriteEmail():
             self.zones_cumulative_bar_chart()
             logger.info("✓ Gráfico de zonas generado")
 
+            logger.info("Generando gráfico de desnivel...")
+            self.elev_gain_chart()
+            logger.info("✓ Gráfico de desnivel generado")
+
+            logger.info("Generando gráfico de volumen...")
+            self.time_chart()
+            logger.info("✓ Gráfico de volumen generado")
+
             # pdf_athlete
             athlete_name_unified = athlete_name.replace(" ", "_")
             pdf_athlete_output = f"outputs/{athlete_name}/email/{date}.pdf_athlete"
@@ -302,7 +310,8 @@ def ejecutar_proceso_completo():
         logger.info("="*60)
         
         date = datetime.datetime.today() - datetime.timedelta(days=7) 
-        date_string = date.strftime("%Y-%m-%d")
+        #date_string = date.strftime("%Y-%m-%d")
+        date_string = '2025-12-29'
         logger.info(f"Fecha de reporte: {date_string}")
         
         email_count = 0
