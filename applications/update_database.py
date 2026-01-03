@@ -110,7 +110,7 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
                 logger.info("No hay nuevos datos para descargar")
                 break
 
-def update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name):
+def update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, credentials_dict):
     columns = ['Athlete varchar(255) NOT NULL PRIMARY KEY',
             'MA_form_4w float',
             'MA_form_12w float',
@@ -124,10 +124,56 @@ def update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name):
         ]
     # use columns to create query
     table_columns = ', '.join(columns)
-    query = f"CREATE TABLE IF NOT EXISTS weekly_stats.weekly_stats_moving_averages ({table_columns})"
-    pd.read_sql_query(query, pool)
+    query = text(f"CREATE TABLE IF NOT EXISTS weekly_stats.weekly_stats_moving_averages ({table_columns})")
+    with pool.begin() as conn:
+        conn.execute(query)
+    
+    athletes_unified = []
+    athletes = []
+    for data in credentials_dict.values():
+        name_unified = data['icu_name'].replace(" ", "_")
+        athletes_unified.append(name_unified)
+        athletes.append(data['icu_name'])
+    logger.info(f"Atletas encontrados: {athletes}")
+    moving_avg_df = pd.DataFrame(columns=[
+        'Athlete', 
+        'MA_form_4w', 
+        'MA_form_12w', 
+        'MA_form_52w', 
+        'MA_time_4w', 
+        'MA_time_12w', 
+        'MA_time_52w', 
+        'MA_elevation_4w', 
+        'MA_elevation_12w', 
+        'MA_elevation_52w'
+    ])
 
-    # update weekly_stats_moving_averages table
+    # extract data from every athlete for the last 52 weeks
+    data = []
+    for athlete in athletes_unified:
+        logger.info(f"Guardando datos para {athlete}...")
+        query = f"SELECT * FROM weekly_stats.weekly_stats_{athlete} ORDER BY date DESC LIMIT 52"
+        df_athlete = pd.read_sql(query, pool)
+        logger.info(f"El shape es: {df_athlete.shape}")
+
+        # calculate moving averages
+        athlete_data = {
+        'Athlete': athlete,
+        'MA_form_4w': df_athlete['form'].iloc[0:4].mean(),
+        'MA_form_12w': df_athlete['form'].iloc[0:12].mean(),
+        'MA_form_52w': df_athlete['form'].mean(),
+        'MA_time_4w': df_athlete['time'].iloc[0:4].mean(),
+        'MA_time_12w': df_athlete['time'].iloc[0:12].mean(),
+        'MA_time_52w': df_athlete['time'].mean(),
+        'MA_elevation_4w': df_athlete['total_elevation_gain'].iloc[0:4].mean(),
+        'MA_elevation_12w': df_athlete['total_elevation_gain'].iloc[0:12].mean(),
+        'MA_elevation_52w': df_athlete['total_elevation_gain'].mean()
+    }
+        data.append(athlete_data)
+
+    moving_avg_df = pd.DataFrame(data)
+    # save data
+    moving_avg_df.to_sql('weekly_stats_moving_averages', pool, if_exists='append', index=False)
 
 @app.route("/")
 def home():
