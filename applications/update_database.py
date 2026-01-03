@@ -124,9 +124,12 @@ def update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, cre
         ]
     # use columns to create query
     table_columns = ', '.join(columns)
-    query = text(f"CREATE TABLE IF NOT EXISTS weekly_stats.weekly_stats_moving_averages ({table_columns})")
+    query_1 = text(f"CREATE TABLE IF NOT EXISTS weekly_stats.weekly_stats_moving_averages ({table_columns})")
+    query_2 = text("TRUNCATE TABLE weekly_stats.weekly_stats_moving_averages")
     with pool.begin() as conn:
-        conn.execute(query)
+        conn.execute(query_1)
+        conn.execute(query_2)
+        conn.commit()
     
     athletes_unified = []
     athletes = []
