@@ -1,4 +1,4 @@
-from fpdf import FPDF
+from fpdf_athlete import FPdf_athlete
 from redmail import gmail
 from utils.googlecloud import GCcredential, GCMySQL
 from flask import Flask
@@ -27,7 +27,7 @@ if dir_actual not in sys.path:
 
 app = Flask(__name__)
 
-class ReporteDeportista(FPDF):
+class ReporteDeportista(FPdf_athlete):
 
     def __init__(self, athlete_name):
         super().__init__()
@@ -38,63 +38,79 @@ class ReporteDeportista(FPDF):
         self.cell(0, 10, f"Resumen de Rendimiento: {self.athlete_name}", 0, 1, "C")
         self.ln(5)
 
-def generar_pdf_deportista(nombre_archivo, athlete_name):
-        pdf = ReporteDeportista(athlete_name)
-        pdf.add_page()
-        pdf.set_font("helvetica", size=12)
+def generar_pdf_athlete_deportista(nombre_archivo, athlete_name):
+        pdf_athlete = ReporteDeportista(athlete_name)
+        pdf_athlete.add_page()
+        pdf_athlete.set_font("helvetica", size=12)
 
         # Introducción
-        pdf.multi_cell(0, 10, "Hola,\nAquí tienes el análisis visual y las estadísticas correspondientes a la última sesión. Los datos muestran un progreso constante.")
-        pdf.ln(5)
+        pdf_athlete.multi_cell(0, 10, "Hola,\nAquí tienes el análisis visual y las estadísticas correspondientes a la última semana.")
+        pdf_athlete.ln(5)
 
         # Listado de imágenes a incluir
         graficos = [
-            ("1. Intensidad de Entrenamiento", f"outputs/{athlete_name}/email/form.png"),
-            ("2. Comparativa Semanal", f"outputs/{athlete_name}/email/hours.png"),
-            ("3. Distribución de Zonas", f"outputs/{athlete_name}/email/zones.png")
+            ("Gráfico de forma", f"outputs/{athlete_name}/email/form.png"),
+            ("Gráfico de horas", f"outputs/{athlete_name}/email/hours.png"),
+            ("Gráfico de zonas", f"outputs/{athlete_name}/email/zones.png"),
+            ("Gráfico de desnivel", f"outputs/{athlete_name}/email/elevation.png"),
+            ("Gráfico de volumen", f"outputs/{athlete_name}/email/volume.png"),
         ]
 
         for titulo, ruta in graficos:
             if os.path.exists(ruta):
-                pdf.set_font("helvetica", "B", 12)
-                pdf.cell(0, 10, titulo, 0, 1)
+                pdf_athlete.set_font("helvetica", "B", 12)
+                pdf_athlete.cell(0, 10, titulo, 0, 1)
                 
                 # Insertar imagen (ajustando ancho a 180mm)
-                pdf.image(ruta, x=15, w=180)
-                pdf.ln(10)
+                pdf_athlete.image(ruta, x=15, w=180)
+                pdf_athlete.ln(10)
 
-        pdf.output(nombre_archivo)
+        pdf_athlete.output(nombre_archivo)
 
 class WriteEmail():
-    def __init__(self, athlete_name, date, data):
+    def __init__(self, athlete_name, date, data, df_average):
         self.athlete_name = athlete_name
         self.date = date
-        self.data = data
+        self.athlete_data = data
+        self.mov_avg_data = df_average
     
     def form_chart(self):
-        form = self.data['form'].values[0]
-        # fill the back space with different colors based on y values horizontally
-        fig = plt.figure(figsize=(10, 5))
-        ax = fig.add_subplot(1, 1, 1)
-        # dar color al fondo de la grafica
-        ax.axhspan(-100, -30, facecolor='red', alpha=0.5)
-        ax.axhspan(-30, -10, facecolor='green', alpha=0.5)
-        ax.axhspan(-10, 5, facecolor='gray', alpha=0.5)
-        ax.axhspan(5, 20, facecolor='blue', alpha=0.5)
-        ax.axhspan(20, 100, facecolor='yellow', alpha=0.5)
+        form = self.athlete_data['form'].values[0]
+        if form < -30:
+            bar_color = 'red'
+        elif form < -10:
+            bar_color = 'green'
+        elif form < 5:
+            bar_color = 'gray'
+        elif form < 20:
+            bar_color = 'blue'
+        else:
+            bar_color = 'yellow'
+        plt.figure(figsize=(10, 5))
+        plt.bar(['Form'], [form], color=bar_color, label='Form')
+        
+        # add horizontal lines
+        plt.axhline(y=-30, color='red', linestyle='solid', label='Riesgo Alto')
+        plt.axhline(y=-10, color='green', linestyle='solid', label='Óptimo')
+        plt.axhline(y=5, color='gray', linestyle='solid', label = 'Zona gris')
+        plt.axhline(y=20, color='blue', linestyle='solid', label = 'Fresco')
+        plt.axhline(y=100, color='yellow', linestyle='solid', label = 'Transición')
 
-        # graph the form bar vertically
-        ax.bar(1, form, color='black', width=0.5)
-        ax.set_xlim(0, 2)
-        ax.set_ylim(-100, 100)
-        ax.set_yticks([-100, -30, -10, 5, 20, 100])
-        ax.set_yticklabels(['-100', '-30', '-10', '5', '20', '100'])
-        ax.set_xticks([])
-        ax.set_xticklabels([])
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.spines['left'].set_visible(False)
-        ax.spines['bottom'].set_visible(False)
+        
+        # fill the back space with different colors based on y values horizontally
+        plt.fill_between([0, 1], -30, -100, color='red')
+        plt.fill_between([0, 1], -10, -30, color='green')
+        plt.fill_between([0, 1], 5, -10, color='gray')
+        plt.fill_between([0, 1], 20, 5, color='blue')
+        plt.fill_between([0, 1], 100, 20, color='yellow')
+
+        # add legend
+        plt.legend()
+
+        # add labels
+        plt.xlabel('Form')
+        plt.title('Impacto de la carga de entrenamiento', fontsize=16, fontweight='bold')
+        
         os.makedirs(f"outputs/{self.athlete_name}/email",exist_ok=True)
         if os.path.exists(f"outputs/{self.athlete_name}/email/form.png"):
             os.remove(f"outputs/{self.athlete_name}/email/form.png")
@@ -103,9 +119,9 @@ class WriteEmail():
     
     def hours_pie_chart(self):
         labels = 'Run', 'Ride', 'Other'
-        run_hours = self.data['run_time'].values[0]
-        ride_hours = self.data['ride_time'].values[0]
-        other_hours = self.data['strength_time'].values[0]
+        run_hours = self.athlete_data['run_time'].values[0]
+        ride_hours = self.athlete_data['ride_time'].values[0]
+        other_hours = self.athlete_data['strength_time'].values[0]
         sizes = [run_hours, ride_hours, other_hours]
         # if value nan convert to 0 use numpy
         sizes = np.array(sizes, dtype=float)
@@ -116,6 +132,8 @@ class WriteEmail():
         ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%',
                 shadow=True, startangle=90)
         ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        # add title
+        ax1.set_title('Distribución de Horas por Actividad', fontsize=16, fontweight='bold')
         if os.path.exists(f"outputs/{self.athlete_name}/email/hours.png"):
             os.remove(f"outputs/{self.athlete_name}/email/hours.png")
         plt.savefig(f"outputs/{self.athlete_name}/email/hours.png", bbox_inches='tight')
@@ -123,23 +141,78 @@ class WriteEmail():
     
     def zones_cumulative_bar_chart(self):
 
-        z1_per = self.data['Z_1'].values[0]
-        z2_per = self.data['Z_2'].values[0]
-        z3_per = self.data['Z_3'].values[0]
-        z4_per = self.data['Z_4'].values[0]
-        z5_per = self.data['Z_5'].values[0]
-        z6_per = self.data['Z_6'].values[0]
-        z7_per = self.data['Z_7'].values[0]
+        z1_per = self.athlete_data['Z_1'].values[0]
+        z2_per = self.athlete_data['Z_2'].values[0]
+        z3_per = self.athlete_data['Z_3'].values[0]
+        z4_per = self.athlete_data['Z_4'].values[0]
+        z5_per = self.athlete_data['Z_5'].values[0]
+        z6_per = self.athlete_data['Z_6'].values[0]
 
 
         # graph in bars each in a personalizeed color
         plt.figure(figsize=(10, 5))
-        plt.bar(['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5', 'Zone 6', 'Zone 7'], 
-                [z1_per, z2_per, z3_per, z4_per, z5_per, z6_per, z7_per], 
-                color=['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink'])
+        plt.bar(['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5', 'Zone 6'], 
+                [z1_per, z2_per, z3_per, z4_per, z5_per, z6_per], 
+                color=['gray', 'green', 'yellow', 'red', 'purple', 'black'])
+        # add the value in each bar
+        for i, v in enumerate([z1_per, z2_per, z3_per, z4_per, z5_per, z6_per]):
+            plt.text(i, v, str(v), ha='center', va='bottom', fontsize=8)
+        plt.xlabel('Zones')
+        plt.ylabel('Percentage')
+        plt.title('Distribución de Intensidad', fontsize=16, fontweight='bold')
         if os.path.exists(f"outputs/{self.athlete_name}/email/zones.png"):
             os.remove(f"outputs/{self.athlete_name}/email/zones.png")
         plt.savefig(f"outputs/{self.athlete_name}/email/zones.png", bbox_inches='tight')
+        plt.close()
+    
+    def elev_gain_chart(self):
+
+        # extract the averages but just for the self.athlete_name
+        elev_avg_4 = self.mov_avg_data.loc[self.mov_avg_data['athlete_name'] == self.athlete_name]['MA_elevation_4w'].values[0]
+        elev_avg_12 = self.mov_avg_data.loc[self.mov_avg_data['athlete_name'] == self.athlete_name]['MA_elevation_12w'].values[0]
+        elev_avg_52 = self.mov_avg_data.loc[self.mov_avg_data['athlete_name'] == self.athlete_name]['MA_elevation_52w'].values[0]
+        week_elev = self.athlete_data['total_elevation_gain'].values[0]
+
+        plt.figure(figsize=(10, 5))
+        plt.bar(['Desnivel/Semana'], [week_elev], color='green', label='Desnivel Semana Actual')
+
+        plt.axhline(y=elev_avg_4, color='red', linestyle='solid', label='Desnivel Medio Últimos 4 Semanas')
+        plt.axhline(y=elev_avg_12, color='blue', linestyle='dotted', label='Desnivel Medio Últimas 3 meses')
+        plt.axhline(y=elev_avg_52, color='black', linestyle='dashed', label='Desnivel Medio Último año')
+
+        # add title and labels
+        plt.title('Comparativa desnivel', fontsize=16, fontweight='bold')
+        plt.ylabel('Desnivel (m)')
+        plt.legend()
+
+        if os.path.exists(f"outputs/{self.athlete_name}/email/elevation.png"):
+            os.remove(f"outputs/{self.athlete_name}/email/elevation.png")
+        plt.savefig(f"outputs/{self.athlete_name}/email/elevation.png", bbox_inches='tight')
+        plt.close()
+    
+    def time_chart(self):
+
+        # extract the averages but just for the self.athlete_name
+        time_avg_4 = self.mov_avg_data.loc[self.mov_avg_data['athlete_name'] == self.athlete_name]['MA_time_4w'].values[0]
+        time_avg_12 = self.mov_avg_data.loc[self.mov_avg_data['athlete_name'] == self.athlete_name]['MA_time_12w'].values[0]
+        time_avg_52 = self.mov_avg_data.loc[self.mov_avg_data['athlete_name'] == self.athlete_name]['MA_time_52w'].values[0]
+        week_time = self.athlete_data['time'].values[0]
+
+        plt.figure(figsize=(10, 5))
+        plt.bar(['Tiempo/Semana'], [week_time], color='green', label='Tiempo Semana Actual')
+
+        plt.axhline(y=time_avg_4, color='red', linestyle='solid', label='Tiempo Medio Últimos 4 Semanas')
+        plt.axhline(y=time_avg_12, color='blue', linestyle='dotted', label='Tiempo Medio Últimas 3 meses')
+        plt.axhline(y=time_avg_52, color='black', linestyle='dashed', label='Tiempo Medio Último año')
+
+        # add title and labels
+        plt.title('Comparativa tiempo', fontsize=16, fontweight='bold')
+        plt.ylabel('Tiempo (horas)')
+        plt.legend()
+
+        if os.path.exists(f"outputs/{self.athlete_name}/email/volume.png"):
+            os.remove(f"outputs/{self.athlete_name}/email/volume.png")
+        plt.savefig(f"outputs/{self.athlete_name}/email/volume.png", bbox_inches='tight')
         plt.close()
 
     def send_email(self, info, athlete_name, date, coach_name):
@@ -158,23 +231,23 @@ class WriteEmail():
             self.zones_cumulative_bar_chart()
             logger.info("✓ Gráfico de zonas generado")
 
-            # pdf
+            # pdf_athlete
             athlete_name_unified = athlete_name.replace(" ", "_")
-            pdf_output = f"outputs/{athlete_name}/email/{date}.pdf"
-            logger.info(f"Generando PDF: {pdf_output}")
+            pdf_athlete_output = f"outputs/{athlete_name}/email/{date}.pdf_athlete"
+            logger.info(f"Generando Pdf_athlete: {pdf_athlete_output}")
             # convert str to datetime date
             date = datetime.date.fromisoformat(date)
-            last_pdf_date = date - datetime.timedelta(days=7)
+            last_pdf_athlete_date = date - datetime.timedelta(days=7)
             # convert date to str
-            last_pdf_date = last_pdf_date.strftime("%Y-%m-%d")
-            if os.path.exists(f"outputs/{athlete_name}/email/{last_pdf_date}.pdf"):
-                os.remove(f"outputs/{athlete_name}/email/{last_pdf_date}.pdf")
-            generar_pdf_deportista(pdf_output, athlete_name)
-            logger.info(f"✓ PDF generado correctamente")
+            last_pdf_athlete_date = last_pdf_athlete_date.strftime("%Y-%m-%d")
+            if os.path.exists(f"outputs/{athlete_name}/email/{last_pdf_athlete_date}.pdf_athlete"):
+                os.remove(f"outputs/{athlete_name}/email/{last_pdf_athlete_date}.pdf_athlete")
+            generar_pdf_athlete_deportista(pdf_athlete_output, athlete_name)
+            logger.info(f"✓ Pdf_athlete generado correctamente")
 
-            with open(pdf_output, "rb") as f:
-                contenido_pdf = f.read()
-            logger.info(f"✓ PDF leído, tamaño: {len(contenido_pdf)} bytes")
+            with open(pdf_athlete_output, "rb") as f:
+                contenido_pdf_athlete = f.read()
+            logger.info(f"✓ Pdf_athlete leído, tamaño: {len(contenido_pdf_athlete)} bytes")
             
             # email
             gmail.user_name = info[coach_name]["email"]
@@ -184,17 +257,17 @@ class WriteEmail():
             for key,values in info.items():
                 if 'icu_name' in values.keys():
                     if values['icu_name'] == athlete_name:
-                        correo = values['email']
-                        #correo = 'mikelcampo0112@gmail.com'
+                        #correo = values['email']
+                        correo = 'mikelcampo0112@gmail.com'
                         logger.info(f"Email destino encontrado: {correo}")
             
             logger.info(f"Enviando email a {correo}...")
             gmail.send(
                 subject="Estadísticas semanales de " + athlete_name,
                 receivers=[correo],
-                html=f"<p>Hola {athlete_name}, adjunto encontrarás tu reporte de rendimiento en PDF.</p>",
+                html=f"<p>Hola {athlete_name}, adjunto encontrarás tu reporte de rendimiento en Pdf_athlete.</p>",
                 attachments={
-                    "Reporte_Rendimiento.pdf": contenido_pdf
+                    "Reporte_Rendimiento.pdf_athlete": contenido_pdf_athlete
                 }
             )
             logger.info(f"✓✓✓ EMAIL ENVIADO EXITOSAMENTE a {athlete_name} ✓✓✓")
@@ -243,14 +316,16 @@ def ejecutar_proceso_completo():
                     logger.info(f"\n--- Procesando atleta #{email_count+1}: {athlete_name} ---")
                     # query data from athlete
                     query = f"SELECT * FROM weekly_stats.weekly_stats_{name_unified} WHERE date = '{date_string}'"
-                    df = pd.read_sql_query(query, pool)
+                    df_athlete = pd.read_sql_query(query, pool)
+                    query = f"SELECT * FROM weekly_stats.weekly_stats_moving_averages"
+                    df_averages = pd.read_sql_query(query, pool)
                     # if no data, skip
-                    if df['time'].values[0] == 0.0:
+                    if df_athlete['time'].values[0] == 0.0:
                         logger.info(f"--- Atleta {athlete_name} sin datos ---")
                         continue
                     else:
                         logger.info(f"--- Atleta {athlete_name} con datos ---")
-                        email_com = WriteEmail(athlete_name, date_string, df)
+                        email_com = WriteEmail(athlete_name, date_string, df_athlete, df_averages)
                         email_com.send_email(credentials_info, athlete_name, date_string, coach_name)
                         email_count += 1
                         logger.info(f"--- Finalizado atleta {athlete_name} ---\n")
