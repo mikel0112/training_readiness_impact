@@ -182,30 +182,31 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
     # creata table
     for athlete in athletes_unified:
         logger.info(f"Guardando datos para {athlete}...")
-        try:
-            query = f"SELECT * FROM wellness_data.wellness_daily_{athlete}"
-            df_athlete = pd.read_sql(query, pool)
-            logger.info(f"El shape es: {df_athlete.shape}")
-            start_date = datetime.date.today()
-            end_date = start_date
-            id = credentials_dict[athletes[athletes_unified.index(athlete)]]["id"]
+        if athlete == 'Mikel_Campo': # cambiar cuando ids del resto
+            try:
+                query = f"SELECT * FROM wellness_data.wellness_daily_{athlete}"
+                df_athlete = pd.read_sql(query, pool)
+                logger.info(f"El shape es: {df_athlete.shape}")
+                start_date = datetime.date.today()
+                end_date = start_date
+                id = credentials_dict[athletes[athletes_unified.index(athlete)]]["id"]
 
-            wellness_data = download_data.wellness(start_date, end_date, id)
-            wellness_df = clean_data.wellness_data(wellness_data)
-            wellness_df.to_sql(f'wellness_daily_{athlete}', pool, schema='wellness_data', if_exists='append', index=False)
-        except:
-            logger.info(f"No hay datos para {athlete}")
-            start_date = "2025-01-01"
-            start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
-            end_date = datetime.date.today()
-            id = credentials_dict[athletes[athletes_unified.index(athlete)]]["id"]
-            logger.info(f"Descargabdo datos desde {start_date} hasta {end_date} para {athlete}")
-            wellness_data_dict = download_data.wellness(start_date, end_date, id)
-            wellness_df = clean_data.wellness_data(wellness_data_dict)
-            query = text(f"CREATE TABLE IF NOT EXISTS wellness_data.wellness_daily_{athlete} (date DATE, rampRate FLOAT, weight FLOAT, restingHR FLOAT, hrv FLOAT, sleepSecs FLOAT, mood FLOAT, injury FLOAT);")
-            with pool.begin() as conn:
-                conn.execute(query)
-            wellness_df.to_sql(f'wellness_daily_{athlete}', pool, schema='wellness_data', if_exists='append', index=False)
+                wellness_data = download_data.wellness(start_date, end_date, id)
+                wellness_df = clean_data.wellness_data(wellness_data)
+                wellness_df.to_sql(f'wellness_daily_{athlete}', pool, schema='wellness_data', if_exists='append', index=False)
+            except:
+                logger.info(f"No hay datos para {athlete}")
+                start_date = "2025-01-01"
+                start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
+                end_date = datetime.date.today()
+                id = credentials_dict[athletes[athletes_unified.index(athlete)]]["id"]
+                logger.info(f"Descargabdo datos desde {start_date} hasta {end_date} para {athlete}")
+                wellness_data_dict = download_data.wellness(start_date, end_date, id)
+                wellness_df = clean_data.wellness_data(wellness_data_dict)
+                query = text(f"CREATE TABLE IF NOT EXISTS wellness_data.wellness_daily_{athlete} (date DATE, rampRate FLOAT, weight FLOAT, restingHR FLOAT, hrv FLOAT, sleepSecs FLOAT, mood FLOAT, injury FLOAT);")
+                with pool.begin() as conn:
+                    conn.execute(query)
+                wellness_df.to_sql(f'wellness_daily_{athlete}', pool, schema='wellness_data', if_exists='append', index=False)
 
 @app.route("/")
 def home():
