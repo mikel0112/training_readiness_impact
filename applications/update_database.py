@@ -131,9 +131,10 @@ def update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, cre
     athletes_unified = []
     athletes = []
     for key, data in credentials_dict.items():
-        name_unified = data['icu_name'].replace(" ", "_")
-        athletes_unified.append(name_unified)
-        athletes.append(data['icu_name'])
+        if 'icu_name' in data:
+            name_unified = data['icu_name'].replace(" ", "_")
+            athletes_unified.append(name_unified)
+            athletes.append(data['icu_name'])
     logger.info(f"Atletas encontrados: {athletes}")
 
     # extract data from every athlete for the last 52 weeks
