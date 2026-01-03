@@ -201,6 +201,10 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
             id = credentials_dict[athletes[athletes_unified.index(athlete)]]["id"]
             wellness_data = download_data.wellness(start_date, end_date, id)
             wellness_df = clean_data.wellness_data(wellness_data)
+            query = text(f"CREATE TABLE wellness_data.wellness_daily_{athlete} (date DATE, rampRate FLOAT, weight FLOAT, restingHR FLOAT, hrv FLOAT, sleepSecs FLOAT, mood FLOAT, injury FLOAT);")
+            with pool.begin() as conn:
+                conn.execute(query)
+                conn.commit()
             wellness_df.to_sql(f'wellness_data.wellness_daily_{athlete}', pool, if_exists='append', index=False)
 
 @app.route("/")

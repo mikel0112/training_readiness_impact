@@ -21,8 +21,7 @@ class CleanData:
             "restingHR",
             "hrv",
             "sleepSecs",
-            "stress",
-            "motivation",
+            "mood",
             "injury",
         ]
         clean_df = wellness_df[interesting_columns]
