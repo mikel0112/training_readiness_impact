@@ -168,9 +168,9 @@ class WriteEmail():
     def elev_gain_chart(self):
 
         # extract the averages but just for the self.athlete_name
-        elev_avg_4 = self.mov_avg_data.loc[self.mov_avg_data['athlete_name'] == self.athlete_name]['MA_elevation_4w'].values[0]
-        elev_avg_12 = self.mov_avg_data.loc[self.mov_avg_data['athlete_name'] == self.athlete_name]['MA_elevation_12w'].values[0]
-        elev_avg_52 = self.mov_avg_data.loc[self.mov_avg_data['athlete_name'] == self.athlete_name]['MA_elevation_52w'].values[0]
+        elev_avg_4 = self.mov_avg_data.loc[self.mov_avg_data['Athlete'] == self.athlete_name]['MA_elevation_4w'].values[0]
+        elev_avg_12 = self.mov_avg_data.loc[self.mov_avg_data['Athlete'] == self.athlete_name]['MA_elevation_12w'].values[0]
+        elev_avg_52 = self.mov_avg_data.loc[self.mov_avg_data['Athlete'] == self.athlete_name]['MA_elevation_52w'].values[0]
         week_elev = self.athlete_data['total_elevation_gain'].values[0]
 
         plt.figure(figsize=(10, 5))
@@ -193,9 +193,9 @@ class WriteEmail():
     def time_chart(self):
 
         # extract the averages but just for the self.athlete_name
-        time_avg_4 = self.mov_avg_data.loc[self.mov_avg_data['athlete_name'] == self.athlete_name]['MA_time_4w'].values[0]
-        time_avg_12 = self.mov_avg_data.loc[self.mov_avg_data['athlete_name'] == self.athlete_name]['MA_time_12w'].values[0]
-        time_avg_52 = self.mov_avg_data.loc[self.mov_avg_data['athlete_name'] == self.athlete_name]['MA_time_52w'].values[0]
+        time_avg_4 = self.mov_avg_data.loc[self.mov_avg_data['Athlete'] == self.athlete_name]['MA_time_4w'].values[0]
+        time_avg_12 = self.mov_avg_data.loc[self.mov_avg_data['Athlete'] == self.athlete_name]['MA_time_12w'].values[0]
+        time_avg_52 = self.mov_avg_data.loc[self.mov_avg_data['Athlete'] == self.athlete_name]['MA_time_52w'].values[0]
         week_time = self.athlete_data['time'].values[0]
 
         plt.figure(figsize=(10, 5))
