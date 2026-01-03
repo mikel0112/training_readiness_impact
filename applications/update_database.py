@@ -170,6 +170,7 @@ def update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, cre
 
 def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials_dict):
     download_data = Intervals(coach_id, api_key)
+    clean_data = CleanData(coach_name)
     athletes_unified = []
     athletes = []
     for key, data in credentials_dict.items():
@@ -191,7 +192,7 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
             id = credentials_dict[athletes[athletes_unified.index(athlete)]]["id"]
 
             wellness_data = download_data.wellness(start_date, end_date, id)
-            wellness_df = pd.DataFrame(wellness_data)
+            wellness_df = clean_data.wellness_data(wellness_data)
             wellness_df.to_sql(f'wellness_data.wellness_daily_{athlete}', pool, if_exists='append', index=False)
         except:
             start_date = "2025-01-01"
@@ -199,7 +200,7 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
             end_date = datetime.date.today()
             id = credentials_dict[athletes[athletes_unified.index(athlete)]]["id"]
             wellness_data = download_data.wellness(start_date, end_date, id)
-            wellness_df = pd.DataFrame(wellness_data)
+            wellness_df = clean_data.wellness_data(wellness_data)
             wellness_df.to_sql(f'wellness_data.wellness_daily_{athlete}', pool, if_exists='append', index=False)
 
 @app.route("/")
@@ -231,6 +232,7 @@ def home():
                 pass
         update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_dict)
         update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, credentials_dict)
+        update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials_dict)
         
         logger.info("\n### Esperando 10 segundos antes de responder... ###")
         time.sleep(10)

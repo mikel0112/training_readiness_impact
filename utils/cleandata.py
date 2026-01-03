@@ -12,7 +12,7 @@ class CleanData:
     def __init__(self, athlete_name):
         self.athlete_name = athlete_name
 
-    def wellness_data(self, wellness_data, old_df):
+    def wellness_data(self, wellness_data):
         wellness_df = pd.DataFrame(wellness_data)
         interesting_columns = [
             "id",
@@ -28,8 +28,7 @@ class CleanData:
         clean_df = wellness_df[interesting_columns]
         clean_df = clean_df.rename(columns={"id": "date"})
         clean_df["sleepSecs"] = clean_df["sleepSecs"] / 3600
-        wellness_clean_df = pd.concat([old_df, clean_df], ignore_index=True)
-        return wellness_clean_df
+        return clean_df
     
 
     def activities_data(self, activities_data, old_act_df):
