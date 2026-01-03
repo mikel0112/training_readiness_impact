@@ -183,7 +183,7 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
     for athlete in athletes_unified:
         logger.info(f"Guardando datos para {athlete}...")
         #if athlete == 'Mikel_Campo': # cambiar cuando ids del resto
-            try:
+        try:
                 query = f"SELECT * FROM wellness_data.wellness_daily_{athlete}"
                 df_athlete = pd.read_sql(query, pool)
                 logger.info(f"El shape es: {df_athlete.shape}")
@@ -194,7 +194,7 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
                 wellness_data = download_data.wellness(start_date, end_date, id)
                 wellness_df = clean_data.wellness_data(wellness_data)
                 wellness_df.to_sql(f'wellness_daily_{athlete}', pool, schema='wellness_data', if_exists='append', index=False)
-            except:
+        except:
                 logger.info(f"No hay datos para {athlete}")
                 start_date = "2025-01-01"
                 start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()

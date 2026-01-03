@@ -14,6 +14,7 @@ class CleanData:
 
     def wellness_data(self, wellness_data_dict):
         wellness_df = pd.DataFrame(wellness_data_dict)
+        logger.info(f"Las columnas son: {wellness_df.columns}")
         interesting_columns = [
             "id",
             "rampRate",
