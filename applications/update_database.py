@@ -45,7 +45,7 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
     for athlete in athletes_unified:
         # extract latest date in any of the tables
         logger.info(f"Buscando datos para {athlete} en la base de datos...")
-        query = f"SELECT date FROM weekly_stats.weekly_stats_{athlete} ORDER BY date DESC LIMIT 1"
+        query = f"SELECT date FROM weekly_stats_{athlete} ORDER BY date DESC LIMIT 1"
         try:
             result = pd.read_sql_query(query, pool)
             end_date = datetime.date.today()
@@ -55,8 +55,8 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
             start_date = end_date - datetime.timedelta(days=weekday) 
             # eliminar datos de la base de datos
             previous_week_data = start_date - datetime.timedelta(days=7)
-            query_1 = text(f"DELETE FROM weekly_stats.weekly_stats_{athlete} WHERE date = '{start_date}'")
-            query_2 = text(f"DELETE FROM weekly_stats.weekly_stats_{athlete} WHERE date = '{previous_week_data}'")
+            query_1 = text(f"DELETE FROM weekly_stats_{athlete} WHERE date = '{start_date}'")
+            query_2 = text(f"DELETE FROM weekly_stats_{athlete} WHERE date = '{previous_week_data}'")
             # execute query
             with pool.begin() as conn:
                 conn.execute(query_1)
@@ -72,7 +72,7 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
             logger.info(f"El index es: {df_weekly_stats.index}")
             logger.info(f"El shape es: {df_weekly_stats.shape}")
             # create table
-            df_weekly_stats.to_sql(f'weekly_stats.weekly_stats_{athlete}', pool, if_exists='append', index=False)
+            df_weekly_stats.to_sql(f'weekly_stats_{athlete}', pool, if_exists='append', index=False)
             #else:
                 #logger.info("No es domingo, no se descargan datos")
                 #break
@@ -104,7 +104,7 @@ def update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_di
                     df_weekly_stats = clean_data.weekly_stats_data(weekly_stats_data, athl)
                     df_columns = df_weekly_stats.columns.tolist()
                     # create table
-                    df_weekly_stats.to_sql(f'weekly_stats.weekly_stats_{athletes_unified[athletes.index(athl)]}', pool, if_exists='append', index=False)
+                    df_weekly_stats.to_sql(f'weekly_stats_{athletes_unified[athletes.index(athl)]}', pool, if_exists='append', index=False)
                 break
             else:
                 logger.info("No hay nuevos datos para descargar")
@@ -124,8 +124,8 @@ def update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, cre
         ]
     # use columns to create query
     table_columns = ', '.join(columns)
-    query_1 = text(f"CREATE TABLE IF NOT EXISTS weekly_stats.weekly_stats_moving_averages ({table_columns})")
-    query_2 = text("TRUNCATE TABLE weekly_stats.weekly_stats_moving_averages")
+    query_1 = text(f"CREATE TABLE IF NOT EXISTS weekly_stats_moving_averages ({table_columns})")
+    query_2 = text("TRUNCATE TABLE weekly_stats_moving_averages")
     with pool.begin() as conn:
         conn.execute(query_1)
         conn.execute(query_2)
@@ -144,7 +144,7 @@ def update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, cre
     data = []
     for athlete in athletes_unified:
         logger.info(f"Guardando datos para {athlete}...")
-        query = f"SELECT * FROM weekly_stats.weekly_stats_{athlete} ORDER BY date DESC LIMIT 52"
+        query = f"SELECT * FROM weekly_stats_{athlete} ORDER BY date DESC LIMIT 52"
         df_athlete = pd.read_sql(query, pool)
         logger.info(f"El shape es: {df_athlete.shape}")
 
@@ -165,7 +165,7 @@ def update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, cre
 
     moving_avg_df = pd.DataFrame(data)
     # save data
-    moving_avg_df.to_sql('weekly_stats.weekly_stats_moving_averages', pool, if_exists='append', index=False)
+    moving_avg_df.to_sql('weekly_stats_moving_averages', pool, if_exists='append', index=False)
 
 
 def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials_dict):
@@ -184,7 +184,7 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
     for athlete in athletes_unified:
         logger.info(f"Guardando datos para {athlete}...")
         try:
-            query = f"SELECT * FROM wellness_data.wellness_daily_{athlete}"
+            query = f"SELECT * FROM wellness_daily_{athlete}"
             df_athlete = pd.read_sql(query, pool)
             logger.info(f"El shape es: {df_athlete.shape}")
             start_date = datetime.date.today()
@@ -193,7 +193,7 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
 
             wellness_data = download_data.wellness(start_date, end_date, id)
             wellness_df = clean_data.wellness_data(wellness_data)
-            wellness_df.to_sql(f'wellness_data.wellness_daily_{athlete}', pool, if_exists='append', index=False)
+            wellness_df.to_sql(f'wellness_daily_{athlete}', pool, if_exists='append', index=False)
         except:
             logger.info(f"No hay datos para {athlete}")
             start_date = "2025-01-01"
@@ -203,11 +203,11 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
             logger.info(f"Descargabdo datos desde {start_date} hasta {end_date} para {athlete}")
             wellness_data_dict = download_data.wellness(start_date, end_date, id)
             wellness_df = clean_data.wellness_data(wellness_data_dict)
-            query = text(f"CREATE TABLE IF NOT EXISTS wellness_data.wellness_daily_{athlete} (date DATE, rampRate FLOAT, weight FLOAT, restingHR FLOAT, hrv FLOAT, sleepSecs FLOAT, mood FLOAT, injury FLOAT);")
+            query = text(f"CREATE TABLE IF NOT EXISTS wellness_daily_{athlete} (date DATE, rampRate FLOAT, weight FLOAT, restingHR FLOAT, hrv FLOAT, sleepSecs FLOAT, mood FLOAT, injury FLOAT);")
             with pool.begin() as conn:
                 conn.execute(query)
                 conn.commit()
-            wellness_df.to_sql(f'wellness_data.wellness_daily_{athlete}', pool, if_exists='append', index=False)
+            wellness_df.to_sql(f'wellness_daily_{athlete}', pool, if_exists='append', index=False)
 
 @app.route("/")
 def home():
@@ -221,8 +221,6 @@ def home():
         gc_credentials = GCcredential(project_id, secret_id)
         credentials_dict = gc_credentials.get_credentials_from_secret()
         gc_mysql = GCMySQL(credentials_dict)
-        connector = gc_mysql.get_db_connection()
-        pool = gc_mysql.sqlalchemy_engine()
 
         # update database
         for user, data in credentials_dict.items():
@@ -236,8 +234,12 @@ def home():
 
             except:
                 pass
+        connector = gc_mysql.get_db_connection(db_name="weekly_stats")
+        pool = gc_mysql.sqlalchemy_engine()
         update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_dict)
         update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, credentials_dict)
+        connector = gc_mysql.get_db_connection(db_name="wellness_data")
+        pool = gc_mysql.sqlalchemy_engine()
         update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials_dict)
         
         logger.info("\n### Esperando 10 segundos antes de responder... ###")

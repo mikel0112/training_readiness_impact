@@ -71,7 +71,7 @@ class GCMySQL():
         self.db_user = self._credentials['database']['user']
         self.db_password = self._credentials['database']['password'] 
 
-    def get_db_connection(self):
+    def get_db_connection(self, db_name):
         project_id = "weeklytrainingemail"
         region = "europe-southwest1"
         instance_name = "weekyemail"
@@ -87,7 +87,7 @@ class GCMySQL():
             "pymysql",
             user=db_user,
             password=db_password,
-            db="weekly_stats",
+            db=db_name,
         )
 
         return conn
