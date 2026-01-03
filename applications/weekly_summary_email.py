@@ -1,4 +1,4 @@
-from fpdf_athlete import FPdf_athlete
+from fpdf import FPDF
 from redmail import gmail
 from utils.googlecloud import GCcredential, GCMySQL
 from flask import Flask
@@ -27,7 +27,7 @@ if dir_actual not in sys.path:
 
 app = Flask(__name__)
 
-class ReporteDeportista(FPdf_athlete):
+class ReporteDeportista(FPDF):
 
     def __init__(self, athlete_name):
         super().__init__()
