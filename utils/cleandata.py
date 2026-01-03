@@ -61,6 +61,9 @@ class CleanData:
         activities_clean_df['moving_time'] = activities_clean_df['moving_time'] / 3600
         activities_clean_df['distance'] = activities_clean_df['distance'] / 1000
         activities_clean_df = pd.concat([old_act_df, activities_clean_df], ignore_index=True)
+        
+        # fill na
+        activities_clean_df.fillna(0, inplace=True)
         return activities_clean_df
         
     def weekly_stats_data(self, weekly_stats_data, athlete):
@@ -139,5 +142,8 @@ class CleanData:
         clean_df['ride_distance'] = clean_df['ride_distance'] / 1000
         clean_df['strength_time'] = clean_df['strength_time'] / 3600
         clean_df['strength_distance'] = clean_df['strength_distance'] / 1000
+
+        # fill na
+        clean_df = clean_df.fillna(0)
 
         return clean_df
