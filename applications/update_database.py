@@ -197,6 +197,7 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
                 wellness_df.to_sql(f'wellness_daily_{athlete}', pool, schema='wellness_data', if_exists='append', index=False)
         except:
                 logger.info(f"No hay datos para {athlete}")
+                logger.info("Excepción en wellness_daily_data")
                 start_date = "2025-01-01"
                 start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
                 end_date = datetime.date.today()
@@ -239,6 +240,7 @@ def update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict
                 activities_df.to_sql(f'activities_{athlete}', pool, schema='activities_data', if_exists='append', index=False)
         except:
                 logger.info(f"No hay datos para {athlete}")
+                logger.info("Excepción en activities_data")
                 start_date = "2025-01-01"
                 start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
                 end_date = datetime.date.today()
