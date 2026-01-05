@@ -188,13 +188,11 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
                 query = f"SELECT * FROM wellness_data.wellness_daily_{athlete}"
                 df_athlete = pd.read_sql(query, pool)
                 logger.info(f"El shape es: {df_athlete.shape}")
-                start_date = datetime.date.today() - datetime.timedelta(days=1)
+                start_date = datetime.date.today() - datetime.timedelta(days=30)
                 end_date = datetime.date.today()
-                query_1 = text(F"DELETE FROM wellness_data.wellness_daily_{athlete} WHERE date = '{start_date}'")
-                query_2 = text(F"DELETE FROM wellness_data.wellness_daily_{athlete} WHERE date = '{end_date}'")
+                query_1 = text(F"DELETE FROM wellness_data.wellness_daily_{athlete} ORDER BY date DESC LIMIT 30")
                 with pool.begin() as conn:
                     conn.execute(query_1)
-                    conn.execute(query_2)
                 id = credentials_dict[keys_list[athletes_unified.index(athlete)]]["id"]
 
                 wellness_data = download_data.wellness(start_date, end_date, id)
