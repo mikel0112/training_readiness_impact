@@ -246,7 +246,7 @@ def update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict
                 logger.info(f"Descargabdo datos desde {start_date} hasta {end_date} para {athlete}")
                 activities_data_dict = download_data.activities(start_date, end_date, id)
                 activities_df = clean_data.activities_data(activities_data_dict)
-                query = text(f"CREATE TABLE IF NOT EXISTS activities_data.activities_{athlete} (id VARHCAR(50), start_date_local DATE, type VARCHAR(50), moving_time FLOAT, distance FLOAT, total_elevation_gain FLOAT, average_speed FLOAT, max_heartrate FLOAT, average_heartrate FLOAT, average_cadence FLOAT, icu_average_watts FLOAT, icu_rpe FLOAT, feel FLOAT, icu_efficiency_factor FLOAT);")
+                query = text(f"CREATE TABLE IF NOT EXISTS activities_data.activities_{athlete} (id VARCHAR(50), start_date_local DATE, type VARCHAR(50), moving_time FLOAT, distance FLOAT, total_elevation_gain FLOAT, average_speed FLOAT, max_heartrate FLOAT, average_heartrate FLOAT, average_cadence FLOAT, icu_average_watts FLOAT, icu_rpe FLOAT, feel FLOAT, icu_efficiency_factor FLOAT);")
                 with pool.begin() as conn:
                     conn.execute(query)
                 activities_df.to_sql(f'activities_{athlete}', pool, schema='activities_data', if_exists='append', index=False)
