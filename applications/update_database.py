@@ -246,6 +246,7 @@ def update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict
                 if last_activity_date < start_date:
                     logger.info(f"Descargabdo actividades desde {start_date} hasta {end_date} para {athlete}")
                     activities_data = download_data.activities(start_date, end_date, id)
+                    logger.info(f"{activities_data}")
                     logger.info(f"Actividades descargados para {athlete}")
                     activities_df = clean_data.activities_data(activities_data)
                     activities_df.to_sql(f'activities_{athlete}', pool, schema='activities_data', if_exists='append', index=False)
@@ -255,6 +256,7 @@ def update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict
                         conn.execute(query)
                     logger.info(f"Descargabdo actividades desde {start_date} hasta {end_date} para {athlete}")
                     activities_data = download_data.activities(start_date, end_date, id)
+                    logger.info(f"{activities_data}")
                     logger.info(f"Actividades descargados para {athlete}")
                     activities_df = clean_data.activities_data(activities_data)
                     activities_df.to_sql(f'activities_{athlete}', pool, schema='activities_data', if_exists='append', index=False)
