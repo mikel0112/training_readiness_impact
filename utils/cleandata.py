@@ -35,7 +35,7 @@ class CleanData:
         return clean_df
     
 
-    def activities_data(self, activities_data, old_act_df):
+    def activities_data(self, activities_data):
         df_activities = pd.DataFrame(activities_data)
         activities_clean_df = df_activities[[
             'id',
@@ -63,7 +63,6 @@ class CleanData:
                                 'average_speed'] = 1/(activities_clean_df['average_speed'] * 0.06)
         activities_clean_df['moving_time'] = activities_clean_df['moving_time'] / 3600
         activities_clean_df['distance'] = activities_clean_df['distance'] / 1000
-        activities_clean_df = pd.concat([old_act_df, activities_clean_df], ignore_index=True)
         
         # fill na
         activities_clean_df.fillna(0, inplace=True)

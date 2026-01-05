@@ -35,7 +35,7 @@ class Intervals:
 
         return res
 
-    def activities(self, start_date, end_date=None):
+    def activities(self, start_date, end_date=None, athlete=None):
         """
         Returns all your activities formatted in CSV
 
@@ -54,11 +54,11 @@ class Intervals:
             params["oldest"] = start_date.isoformat()
             params["newest"] = end_date.isoformat()
             url = "{}/api/v1/athlete/{}/activities".format(
-                Intervals.BASE_URL, self.athlete_id
+                Intervals.BASE_URL, athlete
             )
         else:
             url = "{}/api/v1/athlete/{}/activities/{}".format(
-                Intervals.BASE_URL, self.athlete_id, start_date.isoformat()
+                Intervals.BASE_URL, athlete, start_date.isoformat()
             )
         res = self._make_request("get", url, params)
         j = res.json()

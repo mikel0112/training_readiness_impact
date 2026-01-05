@@ -88,7 +88,7 @@ class WriteEmail():
         else:
             bar_color = 'yellow'
         plt.figure(figsize=(10, 5))
-        plt.bar([0.2, 0.8], [form], color=bar_color, label='Form')
+        plt.bar([0.4, 0.6], [form], color=bar_color, label='Form')
         
         # add horizontal lines
         plt.axhline(y=-30, color='red', linestyle='solid', label='Riesgo Alto')

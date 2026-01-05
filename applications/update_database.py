@@ -209,6 +209,48 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
                     conn.execute(query)
                 wellness_df.to_sql(f'wellness_daily_{athlete}', pool, schema='wellness_data', if_exists='append', index=False)
 
+def update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict):
+    download_data = Intervals(coach_id, api_key)
+    clean_data = CleanData(coach_name)
+    athletes_unified = []
+    athletes = []
+    keys_list = list(credentials_dict.keys())
+    for key, data in credentials_dict.items():
+        if 'icu_name' in data:
+            name_unified = data['icu_name'].replace(" ", "_")
+            athletes_unified.append(name_unified)
+            athletes.append(data['icu_name'])
+    logger.info(f"Atletas encontrados: {athletes}")
+
+    # creata table
+    for athlete in athletes_unified:
+        logger.info(f"Guardando datos para {athlete}...")
+        #if athlete == 'Mikel_Campo': # cambiar cuando ids del resto
+        try:
+                query = f"SELECT * FROM activities_data.activities_{athlete}"
+                df_athlete = pd.read_sql(query, pool)
+                logger.info(f"El shape es: {df_athlete.shape}")
+                start_date = datetime.date.today()
+                end_date = start_date
+                id = credentials_dict[keys_list[athletes_unified.index(athlete)]]["id"]
+
+                activities_data = download_data.activities(start_date, end_date, id)
+                activities_df = clean_data.activities_data(activities_data)
+                activities_df.to_sql(f'activities_{athlete}', pool, schema='activities_data', if_exists='append', index=False)
+        except:
+                logger.info(f"No hay datos para {athlete}")
+                start_date = "2025-01-01"
+                start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
+                end_date = datetime.date.today()
+                id = credentials_dict[keys_list[athletes_unified.index(athlete)]]["id"]
+                logger.info(f"Descargabdo datos desde {start_date} hasta {end_date} para {athlete}")
+                activities_data_dict = download_data.activities(start_date, end_date, id)
+                activities_df = clean_data.activities_data(activities_data_dict)
+                query = text(f"CREATE TABLE IF NOT EXISTS activities_data.activities_{athlete} (date DATE, rampRate FLOAT, weight FLOAT, restingHR FLOAT, hrv FLOAT, sleepSecs FLOAT, mood FLOAT, readinessMSA FLOAT, injury FLOAT);")
+                with pool.begin() as conn:
+                    conn.execute(query)
+                activities_df.to_sql(f'activities_{athlete}', pool, schema='activities_data', if_exists='append', index=False)
+
 @app.route("/")
 def home():
     try:
@@ -239,6 +281,8 @@ def home():
         update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, credentials_dict)
         pool = gc_mysql.sqlalchemy_engine(db_name="wellness_data")
         update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials_dict)
+        pool = gc_mysql.sqlalchemy_engine(db_name="activities_data")
+        update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict)
         
         logger.info("\n### Esperando 10 segundos antes de responder... ###")
         time.sleep(10)
