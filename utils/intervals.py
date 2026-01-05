@@ -46,11 +46,12 @@ class Intervals:
             raise TypeError("dateperrequired")
 
         params = {}
-
+        logger.info("1. Funcion descargar actividades")
         if end_date is not None:
             if type(end_date) is not datetime.date:
                 raise TypeError("dateperrequired")
             end_date = end_date + datetime.timedelta(days=1)
+            logger.info("2. Cargando parametros")
             params["oldest"] = start_date.isoformat()
             params["newest"] = end_date.isoformat()
             url = "{}/api/v1/athlete/{}/activities".format(
@@ -61,6 +62,8 @@ class Intervals:
                 Intervals.BASE_URL, athlete, start_date.isoformat()
             )
         logger.info("Solcitando actividades")
+        logger.info(f"URL: {url}")
+        logger.info(f"Params: {params}")
         res = self._make_request("get", url, params)
         logger.info(f"Respuesta: {res}")
         j = res.json()
