@@ -60,8 +60,11 @@ class Intervals:
             url = "{}/api/v1/athlete/{}/activities/{}".format(
                 Intervals.BASE_URL, athlete, start_date.isoformat()
             )
+        logger.info("Solcitando actividades")
         res = self._make_request("get", url, params)
+        logger.info(f"Respuesta: {res}")
         j = res.json()
+        logger.info(f"JSON: {j}")
         if type(j) is list:
             result = []
             for item in j:
