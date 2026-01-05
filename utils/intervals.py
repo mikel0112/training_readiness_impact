@@ -42,6 +42,7 @@ class Intervals:
         :return: Text data in CSV format
         :rtype: str
         """
+        logger.info("0. Entra o no")
         if type(start_date) is not datetime.date:
             raise TypeError("dateperrequired")
 
