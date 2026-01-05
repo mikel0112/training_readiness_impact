@@ -76,6 +76,7 @@ class WriteEmail():
     
     def form_chart(self):
         form = self.athlete_data['form'].values[0]
+        form = round(form, 2)
         if form < -30:
             bar_color = 'red'
         elif form < -10:
@@ -87,7 +88,7 @@ class WriteEmail():
         else:
             bar_color = 'yellow'
         plt.figure(figsize=(10, 5))
-        plt.bar([0.5], [form], color=bar_color, label='Form')
+        plt.bar([0.2, 0.8], [form], color=bar_color, label='Form')
         
         # add horizontal lines
         plt.axhline(y=-30, color='red', linestyle='solid', label='Riesgo Alto')
@@ -147,6 +148,12 @@ class WriteEmail():
         z4_per = self.athlete_data['Z_4'].values[0]
         z5_per = self.athlete_data['Z_5'].values[0]
         z6_per = self.athlete_data['Z_6'].values[0]
+        z1_per = round(z1_per, 2)
+        z2_per = round(z2_per, 2)
+        z3_per = round(z3_per, 2)
+        z4_per = round(z4_per, 2)
+        z5_per = round(z5_per, 2)
+        z6_per = round(z6_per, 2)
 
 
         # graph in bars each in a personalizeed color
@@ -172,10 +179,16 @@ class WriteEmail():
         elev_avg_12 = self.mov_avg_data.loc[self.mov_avg_data['Athlete'] == self.athlete_name]['MA_elevation_12w'].values[0]
         elev_avg_52 = self.mov_avg_data.loc[self.mov_avg_data['Athlete'] == self.athlete_name]['MA_elevation_52w'].values[0]
         week_elev = self.athlete_data['total_elevation_gain'].values[0]
+        week_elev = round(week_elev, 0)
+        elev_avg_4 = round(elev_avg_4, 0)
+        elev_avg_12 = round(elev_avg_12, 0)
+        elev_avg_52 = round(elev_avg_52, 0)
 
         plt.figure(figsize=(10, 5))
         plt.bar(['Desnivel/Semana'], [week_elev], color='green', label='Desnivel Semana Actual')
-
+        # show value in the bar
+        for i, v in enumerate([week_elev]):
+            plt.text(i, v, str(v), ha='center', va='bottom', fontsize=8)
         plt.axhline(y=elev_avg_4, color='red', linestyle='solid', label='Desnivel Medio Últimos 4 Semanas')
         plt.axhline(y=elev_avg_12, color='blue', linestyle='dotted', label='Desnivel Medio Últimas 3 meses')
         plt.axhline(y=elev_avg_52, color='black', linestyle='dashed', label='Desnivel Medio Último año')
@@ -197,9 +210,16 @@ class WriteEmail():
         time_avg_12 = self.mov_avg_data.loc[self.mov_avg_data['Athlete'] == self.athlete_name]['MA_time_12w'].values[0]
         time_avg_52 = self.mov_avg_data.loc[self.mov_avg_data['Athlete'] == self.athlete_name]['MA_time_52w'].values[0]
         week_time = self.athlete_data['time'].values[0]
+        week_time = round(week_time, 1)
+        time_avg_4 = round(time_avg_4, 1)
+        time_avg_12 = round(time_avg_12, 1)
+        time_avg_52 = round(time_avg_52, 1)
 
         plt.figure(figsize=(10, 5))
         plt.bar(['Tiempo/Semana'], [week_time], color='green', label='Tiempo Semana Actual')
+        # show value in the bar
+        for i, v in enumerate([week_time]):
+            plt.text(i, v, str(v), ha='center', va='bottom', fontsize=8)
 
         plt.axhline(y=time_avg_4, color='red', linestyle='solid', label='Tiempo Medio Últimos 4 Semanas')
         plt.axhline(y=time_avg_12, color='blue', linestyle='dotted', label='Tiempo Medio Últimas 3 meses')
