@@ -289,7 +289,7 @@ def update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict
                 logger.info("Excepción en activities_data")
                 start_date = "2025-01-01"
                 start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
-                end_date = datetime.date.today() - datetime.timedelta(days=2) ### ojoooooo
+                end_date = datetime.date.today()
                 id = credentials_dict[keys_list[athletes_unified.index(athlete)]]["id"]
                 logger.info(f"Descargabdo datos desde {start_date} hasta {end_date} para {athlete}")
                 activities_data_dict = download_data.activities(start_date, end_date, id)
