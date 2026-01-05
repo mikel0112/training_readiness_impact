@@ -187,7 +187,7 @@ class Intervals:
             params["oldest"] = start_date.isoformat()
             params["newest"] = end_date.isoformat()
             url = "{}/api/v1/athlete/{}/wellness".format(
-                Intervals.BASE_URL, self.athlete_id
+                Intervals.BASE_URL, athlete
             )
         else:
             url = "{}/api/v1/athlete/{}/wellness/{}".format(
