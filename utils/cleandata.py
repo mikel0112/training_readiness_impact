@@ -53,6 +53,8 @@ class CleanData:
             'feel',
             'icu_efficiency_factor',
         ]]
+        # fill na
+        activities_clean_df.fillna(0, inplace=True)
         activities_clean_df['start_date_local'] = pd.to_datetime(activities_clean_df['start_date_local']).dt.date
         activities_clean_df['session_quality'] = activities_clean_df['feel'] * activities_clean_df['icu_efficiency_factor']
         activities_clean_df.loc[activities_clean_df['type'] == 'Ride', 
@@ -64,8 +66,7 @@ class CleanData:
         activities_clean_df['moving_time'] = activities_clean_df['moving_time'] / 3600
         activities_clean_df['distance'] = activities_clean_df['distance'] / 1000
         
-        # fill na
-        activities_clean_df.fillna(0, inplace=True)
+        
         return activities_clean_df
         
     def weekly_stats_data(self, weekly_stats_data, athlete):
