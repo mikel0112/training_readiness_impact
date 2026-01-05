@@ -244,20 +244,27 @@ def update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict
                 if last_activity_date < start_date:
                     logger.info(f"Descargabdo actividades desde {start_date} hasta {end_date} para {athlete}")
                     activities_data = download_data.activities(start_date, end_date, id)
-                    logger.info(f"{activities_data}")
-                    logger.info(f"Actividades descargados para {athlete}")
-                    activities_df = clean_data.activities_data(activities_data)
-                    activities_df.to_sql(f'activities_{athlete}', pool, schema='activities_data', if_exists='append', index=False)
+                    # look if empty list
+                    if len(activities_data) == 0:
+                        logger.info(f"No hay actividades para {athlete}")
+                        continue
+                    else:
+                        logger.info(f"Actividades descargados para {athlete}")
+                        activities_df = clean_data.activities_data(activities_data)
+                        activities_df.to_sql(f'activities_{athlete}', pool, schema='activities_data', if_exists='append', index=False)
                 elif last_activity_date == start_date:
                     query = text(F"DELETE FROM activities_data.activities_{athlete} WHERE start_date_local = '{start_date}'")
                     with pool.begin() as conn:
                         conn.execute(query)
                     logger.info(f"Descargabdo actividades desde {start_date} hasta {end_date} para {athlete}")
                     activities_data = download_data.activities(start_date, end_date, id)
-                    logger.info(f"{activities_data}")
-                    logger.info(f"Actividades descargados para {athlete}")
-                    activities_df = clean_data.activities_data(activities_data)
-                    activities_df.to_sql(f'activities_{athlete}', pool, schema='activities_data', if_exists='append', index=False)
+                    if len(activities_data) == 0:
+                        logger.info(f"No hay actividades para {athlete}")
+                        continue
+                    else:
+                        logger.info(f"Actividades descargados para {athlete}")
+                        activities_df = clean_data.activities_data(activities_data)
+                        activities_df.to_sql(f'activities_{athlete}', pool, schema='activities_data', if_exists='append', index=False)
                 elif penultimate_activity_date == start_date:
                     query_1 = text(F"DELETE FROM activities_data.activities_{athlete} WHERE start_date_local = '{last_activity_date}'")
                     query_2 = text(F"DELETE FROM activities_data.activities_{athlete} WHERE start_date_local = '{penultimate_activity_date}'")
@@ -267,10 +274,13 @@ def update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict
                     id = credentials_dict[keys_list[athletes_unified.index(athlete)]]["id"]
                     logger.info(f"Descargabdo actividades desde {start_date} hasta {end_date} para {athlete}")
                     activities_data = download_data.activities(start_date, end_date, id)
-                    logger.info(f"{activities_data}")
-                    logger.info(f"Actividades descargados para {athlete}")
-                    activities_df = clean_data.activities_data(activities_data)
-                    activities_df.to_sql(f'activities_{athlete}', pool, schema='activities_data', if_exists='append', index=False)
+                    if len(activities_data) == 0:
+                        logger.info(f"No hay actividades para {athlete}")
+                        continue
+                    else:
+                        logger.info(f"Actividades descargados para {athlete}")
+                        activities_df = clean_data.activities_data(activities_data)
+                        activities_df.to_sql(f'activities_{athlete}', pool, schema='activities_data', if_exists='append', index=False)
         except:
                 logger.info(f"No hay datos para {athlete}")
                 logger.info("Excepción en activities_data")
