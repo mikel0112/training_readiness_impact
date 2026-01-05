@@ -282,7 +282,8 @@ def update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict
                         logger.info(f"Actividades descargados para {athlete}")
                         activities_df = clean_data.activities_data(activities_data)
                         activities_df.to_sql(f'activities_{athlete}', pool, schema='activities_data', if_exists='append', index=False)
-        except:
+        except Exception as e:
+                logger.info(f"Error al guardar {athlete}: {e}")
                 logger.info(f"No hay datos para {athlete}")
                 logger.info("Excepción en activities_data")
                 start_date = "2025-01-01"
