@@ -1,5 +1,6 @@
 import pandas as pd
 import logging
+import numpy as np
 
 logging.basicConfig(
     level=logging.INFO,
@@ -65,7 +66,8 @@ class CleanData:
                                 'average_speed'] = 1/(activities_clean_df['average_speed'] * 0.06)
         activities_clean_df['moving_time'] = activities_clean_df['moving_time'] / 3600
         activities_clean_df['distance'] = activities_clean_df['distance'] / 1000
-        
+        # if inf values to 0
+        activities_clean_df.replace([np.inf, -np.inf], 0, inplace=True)
         
         return activities_clean_df
         
