@@ -188,8 +188,11 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
                 query = f"SELECT * FROM wellness_data.wellness_daily_{athlete}"
                 df_athlete = pd.read_sql(query, pool)
                 logger.info(f"El shape es: {df_athlete.shape}")
-                start_date = datetime.date.today()
-                end_date = start_date
+                start_date = datetime.date.today() - datetime.timedelta(days=1)
+                end_date = datetime.date.today()
+                query = text(F"DELETE FROM wellness_data.wellness_daily_{athlete} WHERE date = '{start_date}'")
+                with pool.begin() as conn:
+                    conn.execute(query)
                 id = credentials_dict[keys_list[athletes_unified.index(athlete)]]["id"]
 
                 wellness_data = download_data.wellness(start_date, end_date, id)
@@ -231,8 +234,11 @@ def update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict
                 query = f"SELECT * FROM activities_data.activities_{athlete}"
                 df_athlete = pd.read_sql(query, pool)
                 logger.info(f"El shape es: {df_athlete.shape}")
-                start_date = datetime.date.today()
-                end_date = start_date
+                start_date = datetime.date.today() - datetime.timedelta(days=1)
+                end_date = datetime.date.today()
+                query = text(F"DELETE FROM activities_data.activities_{athlete} WHERE date = '{start_date}'")
+                with pool.begin() as conn:
+                    conn.execute(query)
                 id = credentials_dict[keys_list[athletes_unified.index(athlete)]]["id"]
 
                 activities_data = download_data.activities(start_date, end_date, id)
