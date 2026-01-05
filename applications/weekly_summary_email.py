@@ -273,9 +273,9 @@ class WriteEmail():
             gmail.send(
                 subject="Estadísticas semanales de " + athlete_name,
                 receivers=[correo],
-                html=f"<p>Hola {athlete_name}, adjunto encontrarás tu reporte de rendimiento en Pdf_athlete.</p>",
+                html=f"<p>Hola {athlete_name}, adjunto encontrarás tu reporte de rendimiento en el reporte de carga semanal.</p>",
                 attachments={
-                    "Reporte_Rendimiento.pdf_athlete": contenido_pdf_athlete
+                    "Reporte_Carga_Semana.pdf": contenido_pdf_athlete
                 }
             )
             logger.info(f"✓✓✓ EMAIL ENVIADO EXITOSAMENTE a {athlete_name} ✓✓✓")
