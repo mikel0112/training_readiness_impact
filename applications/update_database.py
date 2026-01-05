@@ -236,6 +236,7 @@ def update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict
                 logger.info(f"El shape es: {df_athlete.shape}")
                 start_date = datetime.date.today() - datetime.timedelta(days=1)
                 end_date = datetime.date.today()
+                id = credentials_dict[keys_list[athletes_unified.index(athlete)]]["id"]
                 # order df by date
                 df_athlete = df_athlete.sort_values(by='start_date_local', ascending=False)
                 last_activity_date = df_athlete['start_date_local'].iloc[0]
