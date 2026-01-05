@@ -16,17 +16,29 @@ class CleanData:
     def wellness_data(self, wellness_data_dict):
         wellness_df = pd.DataFrame(wellness_data_dict)
         logger.info(f"Las columnas son: {wellness_df.columns}")
-        interesting_columns = [
-            "id",
-            "rampRate",
-            "weight",
-            "restingHR",
-            "hrv",
-            "sleepSecs",
-            "mood",
-            "ReadinessMSA",
-            "injury",
-        ]
+        if 'ReadinessMSA' in wellness_df.columns:
+            interesting_columns = [
+                "id",
+                "rampRate",
+                "weight",
+                "restingHR",
+                "hrv",
+                "sleepSecs",
+                "mood",
+                "ReadinessMSA",
+                "injury",
+            ]
+        else:
+            interesting_columns = [
+                "id",
+                "rampRate",
+                "weight",
+                "restingHR",
+                "hrv",
+                "sleepSecs",
+                "mood",
+                "injury",
+            ]
         clean_df = wellness_df[interesting_columns]
         logger.info(f"El head es: {clean_df.head()}")
         clean_df = clean_df.rename(columns={"id": "date"})
