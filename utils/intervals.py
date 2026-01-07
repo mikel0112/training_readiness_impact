@@ -235,23 +235,25 @@ class Intervals:
         res = self._make_request("get", url)
         return res.json()
 
-    def power_curve(
+    def best_curves(
         self,
         newest=datetime.datetime.now(),
+        variable = "power",
         curves="90d",
         type="Ride",
         include_ranks=False,
         sub_max_efforts=0,
-        filters='[{"field_id": "type", "value": ["Ride", "VirtualRide"]}]',
+        athlete = id,
+        #filters='[{"field_id": "type", "value": ["Ride", "VirtualRide"]}]',
     ):
         """ """
-        url = f"{self.BASE_URL}/api/v1/athlete/{self.athlete_id}/power-curves"
+        url = f"{self.BASE_URL}/api/v1/athlete/{athlete}/{variable}-curves"
         params = {
             "curves": curves,
             "type": type,
             "includeRanks": include_ranks,
             "subMaxEfforts": f"{sub_max_efforts}",
-            "filters": filters,
+            #"filters": filters,
             "newest": newest.strftime("%Y-%m-%dT%H:%M:%S"),
         }
         res = self._make_request("get", url, params=params)

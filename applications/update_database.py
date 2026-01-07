@@ -299,6 +299,53 @@ def update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict
                     conn.execute(query)
                 activities_df.to_sql(f'activities_{athlete}', pool, schema='activities_data', if_exists='append', index=False)
 
+def update_best_efforts_data(pool, coach_id, api_key, coach_name, credentials_dict):
+    download_data = Intervals(coach_id, api_key)
+    clean_data = CleanData(coach_name)
+    athletes_unified = []
+    athletes = []
+    keys_list = list(credentials_dict.keys())
+    variables = ["power", "pace", "hr"]
+    curves = ["7d", "90d", "365d", "all"]
+    # day of month
+    n_day_month = datetime.date.today().day
+    # just update every month
+    if n_day_month == 1:
+        for key, data in credentials_dict.items():
+            if 'icu_name' in data:
+                name_unified = data['icu_name'].replace(" ", "_")
+                athletes_unified.append(name_unified)
+                athletes.append(data['icu_name'])
+        logger.info(f"Atletas encontrados: {athletes}")
+
+        # creata table
+        for athlete in athletes_unified:
+            logger.info(f"Guardando datos para {athlete}...")
+            #if athlete == 'Mikel_Campo': # cambiar cuando ids del resto
+            for variable in variables:
+                try:
+                        query = text(f"TRUNCATE TABLE best_efforts.{variable}_{athlete}")
+                        with pool.begin() as conn:
+                            conn.execute(query)
+                        id = credentials_dict[keys_list[athletes_unified.index(athlete)]]["id"]
+                        best_efforts_dict = download_data.best_curves(variable=variable, curves=curves, athlete=id, type="Run")
+                        best_efforts_df = clean_data.best_efforts_data(best_efforts_dict, variable)
+                        best_efforts_df.to_sql(f'{variable}_{athlete}', pool, schema='best_efforts', if_exists='append', index=False)
+                except Exception as e:
+                        logger.info(f"Error al guardar {athlete}: {e}")
+                        logger.info(f"No hay datos para {athlete}")
+                        id = credentials_dict[keys_list[athletes_unified.index(athlete)]]["id"]
+                        logger.info(f"Descargabdo datos de {variable} para {athlete}")
+                        best_efforts_dict = download_data.best_curves(variable=variable, curves=curves, athlete=id, type="Run")
+                        best_efforts_df = clean_data.best_efforts_data(best_efforts_dict, variable)
+                        if variable == 'pace':
+                            query = text(f"CREATE TABLE IF NOT EXISTS best_efforts.{variable}_{athlete} (7d_distance FLOAT, 7d_values FLOAT, 90d_distance FLOAT, 90d_values FLOAT, 365d_distance FLOAT, 365d_values FLOAT, all_distance FLOAT, all_values FLOAT);")
+                        else:
+                            query = text(f"CREATE TABLE IF NOT EXISTS best_efforts.{variable}_{athlete} (7d_secs FLOAT, 7d_values FLOAT, 90d_secs FLOAT, 90d_values FLOAT, 365d_secs FLOAT, 365d_values FLOAT, all_secs FLOAT, all_values FLOAT);")
+                        with pool.begin() as conn:
+                            conn.execute(query)
+                        best_efforts_df.to_sql(f'{variable}_{athlete}', pool, schema='best_efforts', if_exists='append', index=False)
+
 @app.route("/")
 def home():
     try:
@@ -325,12 +372,14 @@ def home():
             except:
                 pass
         pool = gc_mysql.sqlalchemy_engine(db_name="weekly_stats")
-        update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_dict)
-        update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, credentials_dict)
+        #update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_dict)
+        #update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, credentials_dict)
         pool = gc_mysql.sqlalchemy_engine(db_name="wellness_data")
-        update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials_dict)
+        #update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials_dict)
         pool = gc_mysql.sqlalchemy_engine(db_name="activities_data")
-        update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict)
+        #update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict)
+        pool = gc_mysql.sqlalchemy_engine(db_name="best_efforts")
+        update_best_efforts_data(pool, coach_id, api_key, coach_name, credentials_dict)
         
         logger.info("\n### Esperando 10 segundos antes de responder... ###")
         time.sleep(10)
@@ -350,7 +399,36 @@ def health():
 
 
 if __name__ == "__main__":
-
+    """# Modo ejecución automática
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
-    
+    """
+    # Modo debug
+    project_id = "weeklytrainingemail"
+    secret_id = "p-info-json"
+    gc_credentials = GCcredential(project_id, secret_id)
+    credentials_dict = gc_credentials.get_credentials_from_secret()
+    gc_mysql = GCMySQL(credentials_dict)
+
+    # update database
+    for user, data in credentials_dict.items():
+        try:
+            if data['role'] == "coach":
+                coach_name = user
+                logger.info(f"Coach identificado: {coach_name}")
+                
+                coach_id = credentials_dict[coach_name]["id"]
+                api_key = credentials_dict[coach_name]["password"]
+
+        except:
+            pass
+    pool = gc_mysql.sqlalchemy_engine(db_name="weekly_stats")
+    #update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_dict)
+    #update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, credentials_dict)
+    pool = gc_mysql.sqlalchemy_engine(db_name="wellness_data")
+    #update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials_dict)
+    pool = gc_mysql.sqlalchemy_engine(db_name="activities_data")
+    #update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict)
+    pool = gc_mysql.sqlalchemy_engine(db_name="best_efforts")
+    update_best_efforts_data(pool, coach_id, api_key, coach_name, credentials_dict)
+    #"""

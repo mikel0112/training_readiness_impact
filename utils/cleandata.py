@@ -80,6 +80,8 @@ class CleanData:
         activities_clean_df['distance'] = activities_clean_df['distance'] / 1000
         # if inf values to 0
         activities_clean_df.replace([np.inf, -np.inf], 0, inplace=True)
+        # if moving_time is 0 eliminate
+        activities_clean_df = activities_clean_df[activities_clean_df['moving_time'] != 0.0]
         
         return activities_clean_df
         
@@ -162,5 +164,24 @@ class CleanData:
 
         # fill na
         clean_df = clean_df.fillna(0)
+
+        return clean_df
+    
+    def best_efforts_data(self, best_efforts_data, variable):
+        curves_lists = best_efforts_data['list']
+        best_efforts_df = pd.DataFrame()
+        for i in range(len(curves_lists)):
+            curve_data = curves_lists[i]
+            curve_id = curve_data['id']
+            curve_y = curve_data['values']
+            if variable == 'pace':
+                curve_x = curve_data['distance']
+                df_curve = pd.DataFrame({f"{curve_id}_distance": curve_x, f"{curve_id}_values": curve_y})
+            else:
+                curve_x = curve_data['secs']
+                df_curve = pd.DataFrame({f"{curve_id}_secs": curve_x, f"{curve_id}_values": curve_y})
+            best_efforts_df = pd.concat([best_efforts_df, df_curve], axis=1)
+        
+        clean_df = best_efforts_df.fillna(0)
 
         return clean_df
