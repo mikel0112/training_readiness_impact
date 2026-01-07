@@ -213,6 +213,114 @@ def update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials
                     conn.execute(query)
                 wellness_df.to_sql(f'wellness_daily_{athlete}', pool, schema='wellness_data', if_exists='append', index=False)
 
+def update_wellness_moving_averages(pool, coach_id, api_key, coach_name, credentials_dict):
+    columns = ['Athlete varchar(255) NOT NULL PRIMARY KEY',
+            'MA_weight_4w float',
+            'MA_weight_12w float',
+            'MA_weight_52w float',
+            'MA_restingHR_4w float',
+            'MA_restingHR_12w float',
+            'MA_restingHR_52w float',
+            'MA_HRV_4w float',
+            'MA_HRV_12w float',
+            'MA_HRV_52w float',
+            'MA_sleep_4w float',
+            'MA_sleep_12w float',
+            'MA_sleep_52w float',
+            'MA_mood_4w float',
+            'MA_mood_12w float',
+            'MA_mood_52w float',
+            'MA_readiness_4w float',
+            'MA_readiness_12w float',
+            'MA_readiness_52w float',
+            'MA_injury_4w float',
+            'MA_injury_12w float',
+            'MA_injury_52w float'
+        ]
+    # use columns to create query
+    table_columns = ', '.join(columns)
+    query_1 = text(f"CREATE TABLE IF NOT EXISTS wellness_moving_averages ({table_columns})")
+    query_2 = text("TRUNCATE TABLE wellness_moving_averages")
+    with pool.begin() as conn:
+        conn.execute(query_1)
+        conn.execute(query_2)
+    
+    athletes_unified = []
+    athletes = []
+    for key, data in credentials_dict.items():
+        if 'icu_name' in data:
+            name_unified = data['icu_name'].replace(" ", "_")
+            athletes_unified.append(name_unified)
+            athletes.append(data['icu_name'])
+    logger.info(f"Atletas encontrados: {athletes}")
+
+    # extract data from every athlete for the last 52 weeks
+    data = []
+    for athlete in athletes_unified:
+        logger.info(f"Guardando datos para {athlete}...")
+        query = f"SELECT * FROM wellness_data.wellness_daily_{athlete} ORDER BY date DESC LIMIT 365"
+        df_athlete = pd.read_sql(query, pool)
+        logger.info(f"El shape es: {df_athlete.shape}")
+
+        if 'readinessMSA' in df_athlete.columns:   
+            # calculate moving averages
+            athlete_data = {
+            'Athlete': athletes[athletes_unified.index(athlete)],
+            'MA_weight_4w': df_athlete['weight'].iloc[0:28].mean(),
+            'MA_weight_12w': df_athlete['weight'].iloc[0:84].mean(),
+            'MA_weight_52w': df_athlete['weight'].mean(),
+            'MA_restingHR_4w': df_athlete['restingHR'].iloc[0:28].mean(),
+            'MA_restingHR_12w': df_athlete['restingHR'].iloc[0:84].mean(),
+            'MA_restingHR_52w': df_athlete['restingHR'].mean(),
+            'MA_HRV_4w': df_athlete['hrv'].iloc[0:28].mean(),
+            'MA_HRV_12w': df_athlete['hrv'].iloc[0:84].mean(),
+            'MA_HRV_52w': df_athlete['hrv'].mean(),
+            'MA_sleep_4w': df_athlete['sleepSecs'].iloc[0:28].mean(),
+            'MA_sleep_12w': df_athlete['sleepSecs'].iloc[0:84].mean(),
+            'MA_sleep_52w': df_athlete['sleepSecs'].mean(),
+            'MA_mood_4w': df_athlete['mood'].iloc[0:28].mean(),
+            'MA_mood_12w': df_athlete['mood'].iloc[0:84].mean(),
+            'MA_mood_52w': df_athlete['mood'].mean(),
+            'MA_readiness_4w': df_athlete['readinessMSA'].iloc[0:28].mean(),
+            'MA_readiness_12w': df_athlete['readinessMSA'].iloc[0:84].mean(),
+            'MA_readiness_52w': df_athlete['readinessMSA'].mean(),
+            'MA_injury_4w': df_athlete['injury'].iloc[0:28].mean(),
+            'MA_injury_12w': df_athlete['injury'].iloc[0:84].mean(),
+            'MA_injury_52w': df_athlete['injury'].mean(),
+        }
+        else:
+            # calculate moving averages
+            athlete_data = {
+            'Athlete': athletes[athletes_unified.index(athlete)],
+            'MA_weight_4w': df_athlete['weight'].iloc[0:28].mean(),
+            'MA_weight_12w': df_athlete['weight'].iloc[0:84].mean(),
+            'MA_weight_52w': df_athlete['weight'].mean(),
+            'MA_restingHR_4w': df_athlete['restingHR'].iloc[0:28].mean(),
+            'MA_restingHR_12w': df_athlete['restingHR'].iloc[0:84].mean(),
+            'MA_restingHR_52w': df_athlete['restingHR'].mean(),
+            'MA_HRV_4w': df_athlete['hrv'].iloc[0:28].mean(),
+            'MA_HRV_12w': df_athlete['hrv'].iloc[0:84].mean(),
+            'MA_HRV_52w': df_athlete['hrv'].mean(),
+            'MA_sleep_4w': df_athlete['sleepSecs'].iloc[0:28].mean(),
+            'MA_sleep_12w': df_athlete['sleepSecs'].iloc[0:84].mean(),
+            'MA_sleep_52w': df_athlete['sleepSecs'].mean(),
+            'MA_mood_4w': df_athlete['mood'].iloc[0:28].mean(),
+            'MA_mood_12w': df_athlete['mood'].iloc[0:84].mean(),
+            'MA_mood_52w': df_athlete['mood'].mean(),
+            'MA_readiness_4w': 0,
+            'MA_readiness_12w': 0,
+            'MA_readiness_52w': 0,
+            'MA_injury_4w': df_athlete['injury'].iloc[0:28].mean(),
+            'MA_injury_12w': df_athlete['injury'].iloc[0:84].mean(),
+            'MA_injury_52w': df_athlete['injury'].mean(),
+        }
+        data.append(athlete_data)
+
+    moving_avg_df = pd.DataFrame(data)
+    # save data
+    moving_avg_df.to_sql('wellness_moving_averages', pool, schema='wellness_data', if_exists='append', index=False)
+
+
 def update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict):
     download_data = Intervals(coach_id, api_key)
     clean_data = CleanData(coach_name)
@@ -372,12 +480,13 @@ def home():
             except:
                 pass
         pool = gc_mysql.sqlalchemy_engine(db_name="weekly_stats")
-        #update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_dict)
-        #update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, credentials_dict)
+        update_weekly_stats_data(pool, coach_id, api_key, coach_name, credentials_dict)
+        update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, credentials_dict)
         pool = gc_mysql.sqlalchemy_engine(db_name="wellness_data")
-        #update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials_dict)
+        update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials_dict)
+        update_wellness_moving_averages(pool, coach_id, api_key, coach_name, credentials_dict)
         pool = gc_mysql.sqlalchemy_engine(db_name="activities_data")
-        #update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict)
+        update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict)
         pool = gc_mysql.sqlalchemy_engine(db_name="best_efforts")
         update_best_efforts_data(pool, coach_id, api_key, coach_name, credentials_dict)
         
@@ -399,7 +508,7 @@ def health():
 
 
 if __name__ == "__main__":
-    """# Modo ejecución automática
+    # Modo ejecución automática
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
     """
@@ -427,8 +536,9 @@ if __name__ == "__main__":
     #update_weekly_stats_moving_averages(pool, coach_id, api_key, coach_name, credentials_dict)
     pool = gc_mysql.sqlalchemy_engine(db_name="wellness_data")
     #update_weellness_daily_data(pool, coach_id, api_key, coach_name, credentials_dict)
+    update_wellness_moving_averages(pool, coach_id, api_key, coach_name, credentials_dict)
     pool = gc_mysql.sqlalchemy_engine(db_name="activities_data")
     #update_activities_data(pool, coach_id, api_key, coach_name, credentials_dict)
     pool = gc_mysql.sqlalchemy_engine(db_name="best_efforts")
-    update_best_efforts_data(pool, coach_id, api_key, coach_name, credentials_dict)
-    #"""
+    #update_best_efforts_data(pool, coach_id, api_key, coach_name, credentials_dict)
+    """
